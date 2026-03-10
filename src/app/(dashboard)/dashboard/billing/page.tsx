@@ -33,7 +33,7 @@ export default function BillingPage() {
                     </CardHeader>
                     <CardContent className="space-y-8">
                         <div className="flex items-center gap-8">
-                            <div className="text-4xl font-bold tracking-tight">$299<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
+                            <div className="text-4xl font-bold tracking-tight">₹299<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
                             <div className="flex-1 space-y-2">
                                 <div className="flex justify-between text-xs font-medium">
                                     <span>Resource Usage (Rooms)</span>
@@ -82,8 +82,8 @@ export default function BillingPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        <InvoiceItem date="Mar 01, 2026" amount="$299.00" status="Paid" />
-                        <InvoiceItem date="Feb 01, 2026" amount="$299.00" status="Paid" />
+                        <InvoiceItem date="Mar 01, 2026" amount="₹299.00" status="Paid" />
+                        <InvoiceItem date="Feb 01, 2026" amount="₹299.00" status="Paid" />
                     </div>
                 </CardContent>
             </Card>

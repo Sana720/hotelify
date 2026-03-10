@@ -12,7 +12,7 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                     title="Total Revenue"
-                    value="$12,450"
+                    value="₹12,450"
                     description="+15% from yesterday"
                     icon={<DollarSign className="w-4 h-4 text-emerald-400" />}
                 />
