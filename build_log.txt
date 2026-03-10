@@ -1,0 +1,48 @@
+
+> hotel_saas@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/ahmadsana/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/ahmadsana/Documents/hotel_saas/package-lock.json
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Error: Cannot apply unknown utility class `shadow-[0_8px_32px_0_rgba(0,`
+    [2m[at onInvalidCandidate (/Users/ahmadsana/Documents/hotel_saas/node_modules/tailwindcss/dist/lib.js:21:1511)][0m
+    [2m[at Ee (/Users/ahmadsana/Documents/hotel_saas/node_modules/tailwindcss/dist/lib.js:16:36740)][0m
+    [2m[at /Users/ahmadsana/Documents/hotel_saas/node_modules/tailwindcss/dist/lib.js:21:355][0m
+    [2m[at Pr (/Users/ahmadsana/Documents/hotel_saas/node_modules/tailwindcss/dist/lib.js:3:1733)][0m
+    [2m[at _ (/Users/ahmadsana/Documents/hotel_saas/node_modules/tailwindcss/dist/lib.js:3:1377)][0m
+    [2m[at Te (/Users/ahmadsana/Documents/hotel_saas/node_modules/tailwindcss/dist/lib.js:21:172)][0m
+    [2m[at pn (/Users/ahmadsana/Documents/hotel_saas/node_modules/tailwindcss/dist/lib.js:38:294)][0m
+    [2m[at async dn (/Users/ahmadsana/Documents/hotel_saas/node_modules/tailwindcss/dist/lib.js:38:631)][0m
+    [2m[at async Xr (/Users/ahmadsana/Documents/hotel_saas/node_modules/@tailwindcss/node/dist/index.js:10:3417)][0m
+    [2m[at async N (/Users/ahmadsana/Documents/hotel_saas/node_modules/@tailwindcss/postcss/dist/index.js:10:3979)][0m
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./Documents/hotel_saas/src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: /Users/ahmadsana/Documents/hotel_saas/src/app/globals.css:1:1: Cannot apply unknown utility class `shadow-[0_8px_32px_0_rgba(0,`
+    at Input.error (Documents/hotel_saas/node_modules/postcss/lib/input.js:135:16) [/Users/ahmadsana/Documents/hotel_saas/.next/build/chunks/c26be_44a7a92d._.js:4651:22]
+    at Root.error (Documents/hotel_saas/node_modules/postcss/lib/node.js:146:32) [/Users/ahmadsana/Documents/hotel_saas/.next/build/chunks/c26be_44a7a92d._.js:928:38]
+    [at Object.Once (/Users/ahmadsana/Documents/hotel_saas/node_modules/@tailwindcss/postcss/dist/index.js:10:6913)]
+    at async LazyResult.runAsync (Documents/hotel_saas/node_modules/postcss/lib/lazy-result.js:293:11) [/Users/ahmadsana/Documents/hotel_saas/.next/build/chunks/c26be_44a7a92d._.js:6214:21]
+    at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34) [/Users/ahmadsana/Documents/hotel_saas/.next/build/chunks/[root-of-the-server]__d5430ae6._.js:146:36]
+    at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23) [/Users/ahmadsana/Documents/hotel_saas/.next/build/chunks/[root-of-the-server]__c2a6c809._.js:443:31]
+
+Import trace:
+  Client Component Browser:
+    ./Documents/hotel_saas/src/app/globals.css [Client Component Browser]
+    ./Documents/hotel_saas/src/app/layout.tsx [Server Component]
+
+
+    at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34) [/Users/ahmadsana/Documents/hotel_saas/.next/build/chunks/[root-of-the-server]__d5430ae6._.js:146:36])
+    at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23) [/Users/ahmadsana/Documents/hotel_saas/.next/build/chunks/[root-of-the-server]__c2a6c809._.js:443:31])
