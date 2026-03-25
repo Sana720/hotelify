@@ -8,6 +8,7 @@ export type Organization = {
     subdomain: string;
     custom_domain?: string | null;
     subscription_tier: 'essential' | 'professional' | 'enterprise';
+    status: 'Active' | 'Trial' | 'Maintenance' | 'Suspended';
     created_at: string;
     settings: Record<string, unknown>;
 };

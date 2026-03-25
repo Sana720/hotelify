@@ -1,3 +1,4 @@
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const config = {
@@ -5,52 +6,108 @@ export const config = {
         /*
          * Match all request paths except for the ones starting with:
          * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - images (public images)
-         * - favicon.ico (favicon file)
+         * - _next (Next.js internal files)
+         * - images, assets, favicon.ico (public files)
          */
-        '/((?!api|_next/static|_next/image|images|favicon.ico).*)',
+        '/((?!api|_next|images|assets|favicon.ico).*)',
     ],
 };
 
 export default async function middleware(req: NextRequest) {
+    let res = NextResponse.next({
+        request: {
+            headers: req.headers,
+        },
+    });
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                get(name: string) {
+                    return req.cookies.get(name)?.value;
+                },
+                set(name: string, value: string, options: CookieOptions) {
+                    req.cookies.set({
+                        name,
+                        value,
+                        ...options,
+                    });
+                    res = NextResponse.next({
+                        request: {
+                            headers: req.headers,
+                        },
+                    });
+                    res.cookies.set({
+                        name,
+                        value,
+                        ...options,
+                    });
+                },
+                remove(name: string, options: CookieOptions) {
+                    req.cookies.set({
+                        name,
+                        value: '',
+                        ...options,
+                    });
+                    res = NextResponse.next({
+                        request: {
+                            headers: req.headers,
+                        },
+                    });
+                    res.cookies.set({
+                        name,
+                        value: '',
+                        ...options,
+                    });
+                },
+            },
+        }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
     const url = req.nextUrl;
     const hostname = req.headers.get('host') || '';
+    const isRootAdmin = url.pathname.startsWith('/admin');
+    const isDashboard = url.pathname.startsWith('/dashboard');
 
-    // Define allowed platform domains
+    // 1. Protect Admin Routes
+    if (isRootAdmin && url.pathname !== '/admin/login') {
+        if (!user) {
+            return NextResponse.redirect(new URL('/admin/login', req.url));
+        }
+
+        // Optional: Check for platform_admin role in platform_admins table
+        // For performance, we usually trust the session here and do deep checks in the page/layout
+    }
+
+    // 2. Protect Dashboard Routes
+    if (isDashboard) {
+        if (!user) {
+            return NextResponse.redirect(new URL('/login', req.url));
+        }
+    }
+
+    // 3. Tenant Logic (Keep existing)
     const allowedDomains = ['hotelify.com', 'localhost:3000'];
-
-    // Check if it's the platform domain or a custom domain
     const isPlatformDomain = allowedDomains.some(domain => hostname.endsWith(domain));
-
     let tenant = null;
 
     if (isPlatformDomain) {
         const parts = hostname.split('.');
-        // Check for subdomain (e.g. hotel1.hotelify.com or hotel1.localhost:3000)
         if ((hostname.includes('localhost') && parts.length > 1) || (!hostname.includes('localhost') && parts.length > 2)) {
             tenant = parts[0];
         }
     } else {
-        // Custom domain (e.g. grandroyal.com)
         tenant = hostname;
     }
 
-    // If it's a tenant request, rewrite the URL
-    // We'll preserve the original path but handle tenant context in the app
-    if (tenant && tenant !== 'www') {
-        const path = url.pathname;
-
-        // Pass the tenant identification via a header to the app
-        const response = NextResponse.next();
-        response.headers.set('x-tenant', tenant);
-
-        // Return a rewrite if we want to use a specific tenant base directory
-        // return NextResponse.rewrite(new URL(`/_sites/${tenant}${path}`, req.url));
-
-        return response;
+    if (tenant && tenant !== 'www' && !isRootAdmin) {
+        res.headers.set('x-tenant', tenant);
+        return res;
     }
 
-    return NextResponse.next();
+    return res;
 }

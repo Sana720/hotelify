@@ -15,9 +15,10 @@ export default function Navbar() {
                         <Link href="#features" className="text-sm font-medium hover:text-blue-400 transition-colors">Features</Link>
                         <Link href="#pricing" className="text-sm font-medium hover:text-blue-400 transition-colors">Pricing</Link>
                         <Link href="#about" className="text-sm font-medium hover:text-blue-400 transition-colors">About</Link>
+                        <Link href="/login" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Sign In</Link>
                         <Link
-                            href="/login"
-                            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-opacity"
+                            href="/signup"
+                            className="px-4 py-2 text-sm font-bold bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)]"
                         >
                             Get Started
                         </Link>

@@ -1,116 +1,97 @@
 "use client";
 
+import { useState, useEffect, Suspense } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Hotel, Bell, Shield, Palette, Globe, Save } from "lucide-react";
+import { Hotel, Bell, Shield, Palette, Globe, Save, Home, ChevronRight } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
-export default function SettingsPage() {
+import { PropertyIdentityForm } from "./property-identity-form";
+import { PolicySettingsForm } from "./policy-settings-form";
+
+function SettingsContent() {
+    const searchParams = useSearchParams();
+    const activeTab = searchParams.get("tab") || "identity";
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Provide a stable default during hydration
+    const currentTab = mounted ? activeTab : "identity";
+
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-                <p className="text-muted-foreground mt-1">Manage your property configurations and system preferences.</p>
+        <>
+            <div className="space-y-4">
+                <h1 className="text-2xl font-bold text-white">Hotel Setting</h1>
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                    <Home className="w-3 h-3" />
+                    <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                    <ChevronRight className="w-3 h-3" />
+                    <span>Hotel</span>
+                    <ChevronRight className="w-3 h-3" />
+                    <span className="text-zinc-300">Setting</span>
+                </div>
             </div>
 
-            <Tabs defaultValue="property" className="space-y-6">
-                <TabsList className="bg-white/5 p-1 border border-white/10">
-                    <TabsTrigger value="property" className="gap-2"><Hotel className="w-4 h-4" /> Property</TabsTrigger>
-                    <TabsTrigger value="branding" className="gap-2"><Palette className="w-4 h-4" /> Branding</TabsTrigger>
-                    <TabsTrigger value="security" className="gap-2"><Shield className="w-4 h-4" /> Security</TabsTrigger>
-                    <TabsTrigger value="notifications" className="gap-2"><Bell className="w-4 h-4" /> Notifications</TabsTrigger>
+            <Tabs defaultValue="identity" value={currentTab} className="space-y-10" onValueChange={() => { }}>
+                <TabsList className="bg-white/[0.02] p-1.5 border border-white/5 h-16 rounded-2xl">
+                    <TabsTrigger value="identity" className="px-8 rounded-xl gap-3 data-[state=active]:bg-white data-[state=active]:text-black font-black uppercase tracking-widest text-[10px] transition-all">
+                        <Globe className="w-4 h-4" />
+                        Property Identity
+                    </TabsTrigger>
+                    <TabsTrigger value="policies" className="px-8 rounded-xl gap-3 data-[state=active]:bg-white data-[state=active]:text-black font-black uppercase tracking-widest text-[10px] transition-all">
+                        <Shield className="w-4 h-4" />
+                        Policies
+                    </TabsTrigger>
+                    <TabsTrigger value="security" className="px-8 rounded-xl gap-3 data-[state=active]:bg-white data-[state=active]:text-black font-black uppercase tracking-widest text-[10px] transition-all">
+                        <Bell className="w-4 h-4" />
+                        Security
+                    </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="property">
-                    <Card className="glass border-white/10">
-                        <CardHeader>
-                            <CardTitle>Property Information</CardTitle>
-                            <CardDescription>Update your hotel's public profile and contact details.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="hotel-name">Hotel Name</Label>
-                                    <Input id="hotel-name" defaultValue="Grand Royal Hotel" className="glass" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="subdomain">Subdomain</Label>
-                                    <div className="flex gap-2">
-                                        <Input id="subdomain" defaultValue="grandroyal" className="glass" />
-                                        <div className="flex items-center px-3 rounded-lg bg-white/5 border border-white/10 text-xs text-muted-foreground">
-                                            .hotelify.com
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="address">Address</Label>
-                                <Input id="address" defaultValue="123 Luxury Ave, Beverly Hills, CA" className="glass" />
-                            </div>
-
-                            <Separator className="bg-white/5" />
-
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium">Custom Domain</p>
-                                    <p className="text-xs text-muted-foreground">Connect your own root domain for a white-label experience.</p>
-                                </div>
-                                <Button variant="outline" size="sm" className="glass border-blue-500/20 text-blue-400">
-                                    Connect Domain
-                                </Button>
-                            </div>
-
-                            <div className="pt-4 flex justify-end">
-                                <Button className="rounded-full gap-2">
-                                    <Save className="w-4 h-4" />
-                                    Save Changes
-                                </Button>
-                            </div>
-                        </CardContent>
+                <TabsContent value="identity" className="animate-in fade-in slide-in-from-left-4 duration-500">
+                    <Card className="glass-premium border-white/10 p-10 rounded-[3rem] bg-white/[0.01]">
+                        <PropertyIdentityForm />
                     </Card>
                 </TabsContent>
 
-                <TabsContent value="branding">
-                    <Card className="glass border-white/10">
-                        <CardHeader>
-                            <CardTitle>Visual Identity</CardTitle>
-                            <CardDescription>Customize the look and feel of your guest portal.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-8">
-                            <div className="flex items-start gap-8">
-                                <div className="w-24 h-24 rounded-2xl bg-blue-500/10 border-2 border-dashed border-blue-500/30 flex flex-col items-center justify-center text-blue-400 hover:bg-blue-500/20 cursor-pointer transition-colors">
-                                    <Globe className="w-8 h-8 mb-1" />
-                                    <span className="text-[10px] font-bold uppercase">Logo</span>
-                                </div>
-                                <div className="space-y-2 flex-1">
-                                    <h4 className="text-sm font-medium">Property Logo</h4>
-                                    <p className="text-xs text-muted-foreground max-w-sm">Recommend size: 512x512px. PNG or SVG preferred for high-resolution displays.</p>
-                                    <Button variant="secondary" size="sm" className="rounded-full h-8 text-xs">Upload New</Button>
-                                </div>
-                            </div>
+                <TabsContent value="policies" className="animate-in fade-in slide-in-from-left-4 duration-500">
+                    <Card className="glass-premium border-white/10 p-10 rounded-[3rem] bg-white/[0.01]">
+                        <PolicySettingsForm />
+                    </Card>
+                </TabsContent>
 
-                            <Separator className="bg-white/5" />
-
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-medium">Primary Theme Color</h4>
-                                <div className="flex gap-3">
-                                    {['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'].map((color) => (
-                                        <div
-                                            key={color}
-                                            className="w-10 h-10 rounded-full border-2 border-white/10 cursor-pointer hover:scale-110 transition-transform ring-offset-background hover:ring-2 ring-blue-500"
-                                            style={{ backgroundColor: color }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        </CardContent>
+                <TabsContent value="security" className="animate-in fade-in slide-in-from-left-4 duration-500">
+                    <Card className="glass-premium border-white/10 p-10 rounded-[3rem] bg-white/[0.01]">
+                        <div className="py-20 flex flex-col items-center justify-center text-zinc-600">
+                            <Shield className="w-12 h-12 mb-4 opacity-10" />
+                            <p className="font-black uppercase tracking-[0.2em] text-[10px]">Access Control Active</p>
+                            <p className="text-[10px] font-medium mt-1">Multi-factor authentication and IP whitelisting coming soon.</p>
+                        </div>
                     </Card>
                 </TabsContent>
             </Tabs>
+        </>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            <Suspense fallback={
+                <div className="flex items-center justify-center py-20">
+                    <Hotel className="w-8 h-8 animate-pulse text-zinc-700" />
+                </div>
+            }>
+                <SettingsContent />
+            </Suspense>
         </div>
     );
 }

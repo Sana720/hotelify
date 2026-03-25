@@ -1,3 +1,5 @@
+"use client"
+
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/app/(dashboard)/app-sidebar"
 import { TenantProvider } from "@/components/providers/TenantProvider"

@@ -18,6 +18,7 @@ interface Booking {
     check_out: string;
     status: string;
     total_price: number;
+    advance_amount: number;
     room_number?: string;
 }
 
@@ -28,7 +29,7 @@ const statusConfig = {
     cancelled: { color: "bg-red-500/20 text-red-300 border-red-500/30", icon: <XCircle className="w-3 h-3" />, label: "Cancelled" },
 };
 
-export function BookingList() {
+export function BookingList({ filterType }: { filterType?: string }) {
     const { tenant, isLoading: tenantLoading } = useTenant();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -69,8 +70,14 @@ export function BookingList() {
 
     const handleCheckOut = async (bookingId: string, booking: any) => {
         if (!tenant) return;
-        setLoading(true);
+        
+        const due = (booking.total_price || 0) - (booking.advance_amount || 0);
+        if (due > 0) {
+            const confirmed = window.confirm(`Guest still owes ₹${due.toLocaleString()}. Please clear the due amount before checkout. Proceed anyway?`);
+            if (!confirmed) return;
+        }
 
+        setLoading(true);
         const { error: bookingError } = await supabase
             .from('bookings')
             .update({ status: 'checked_out' })
@@ -105,11 +112,32 @@ export function BookingList() {
 
         async function fetchBookings() {
             setLoading(true);
-            const { data, error } = await supabase
+            const today = new Date().toISOString().split('T')[0];
+            
+            let query = supabase
                 .from('bookings')
                 .select('*, rooms (room_number)')
-                .eq('org_id', tenant?.id)
-                .order('check_in', { ascending: false });
+                .eq('org_id', tenant?.id);
+
+            if (filterType === 'requests') {
+                query = query.in('status', ['confirmed', 'pending']).gte('check_in', today);
+            } else if (filterType === 'today') {
+                query = query.or(`check_in.eq.${today},check_out.eq.${today}`);
+            } else if (filterType === 'checkin') {
+                query = query.eq('check_in', today).eq('status', 'confirmed');
+            } else if (filterType === 'pending') {
+                query = query.lt('check_in', today).eq('status', 'confirmed');
+            } else if (filterType === 'checkout') {
+                query = query.eq('check_out', today).eq('status', 'checked_in');
+            } else if (filterType === 'delayed') {
+                query = query.lt('check_out', today).eq('status', 'checked_in');
+            } else if (filterType === 'upcoming-in') {
+                query = query.gt('check_in', today).eq('status', 'confirmed');
+            } else if (filterType === 'upcoming-out') {
+                query = query.gt('check_out', today).eq('status', 'checked_in');
+            }
+
+            const { data, error } = await query.order('check_in', { ascending: false });
 
             if (data) {
                 setBookings(data.map((b: any) => ({
@@ -121,7 +149,7 @@ export function BookingList() {
         }
 
         fetchBookings();
-    }, [tenant]);
+    }, [tenant, filterType]);
 
     if (tenantLoading || loading) {
         return (
@@ -185,11 +213,29 @@ export function BookingList() {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black flex items-center gap-2">
-                                            <CreditCard className="w-3 h-3 text-emerald-400" /> Total Folio
-                                        </p>
-                                        <div className="text-sm font-bold text-white/80">${booking.total_price?.toLocaleString()}</div>
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] text-white/30 uppercase tracking-widest font-black flex items-center gap-2">
+                                                <CreditCard className="w-3 h-3 text-emerald-400" /> Folio Summary
+                                            </p>
+                                            <div className="flex justify-between items-end border-b border-white/5 pb-2">
+                                                <span className="text-[10px] text-white/40 font-bold">Total Tariff</span>
+                                                <span className="text-sm font-black text-white/80">₹{booking.total_price?.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-end mt-1">
+                                                <span className="text-[10px] text-white/40 font-bold">Advance Paid</span>
+                                                <span className="text-sm font-black text-emerald-400">₹{booking.advance_amount?.toLocaleString() || '0'}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {((booking.total_price || 0) - (booking.advance_amount || 0)) > 0 && (
+                                            <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-3 flex justify-between items-center animate-pulse">
+                                                <span className="text-[9px] text-red-400 font-black uppercase tracking-widest">Balance Due</span>
+                                                <span className="text-base font-black text-white leading-none">
+                                                    ₹{((booking.total_price || 0) - (booking.advance_amount || 0)).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col justify-center items-start lg:items-end">
@@ -223,7 +269,7 @@ export function BookingList() {
                                         onClick={() => setSelectedBooking({ id: booking.id, name: booking.guest_name })}
                                         className="w-32 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/5 text-white/50 hover:text-white"
                                     >
-                                        View Folio
+                                        View Bill
                                     </Button>
                                 </div>
                             </div>

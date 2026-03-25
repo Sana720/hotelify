@@ -25,10 +25,10 @@ export default function LandingPage() {
         {/* Luxury 3D Background */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="/images/landing/hero-bg-abstract-final.png"
+            src="/images/landing/hero-bg-abstract-v2.png"
             alt="HD Abstract Luxury Hotel Background"
             fill
-            className="object-cover opacity-35"
+            className="object-cover opacity-60"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background" />
