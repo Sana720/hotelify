@@ -142,7 +142,7 @@ export function RoomGrid() {
             if (selectedRoom?.status === 'occupied') {
                 const { data: booking } = await supabase
                     .from('bookings')
-                    .select('id, guest_name')
+                    .select('*, rooms (room_number), folios (status)')
                     .eq('room_id', selectedRoom.id)
                     .neq('status', 'checked_out')
                     .neq('status', 'cancelled')
@@ -182,6 +182,44 @@ export function RoomGrid() {
             // Re-fetch logs
             const logRes = await getHousekeepingHistory(tenant.id, selectedRoom.id);
             if (logRes.success) setRoomLogs(logRes.logs || []);
+        }
+        setLogsLoading(false);
+    };
+
+    const handleCheckOut = async () => {
+        if (!tenant || !selectedRoom || !(selectedRoom as any).activeBooking) return;
+        
+        const booking = (selectedRoom as any).activeBooking;
+        const isFolioOpen = booking.folios && booking.folios.length > 0 && booking.folios[0].status !== 'closed';
+        const due = (booking.total_price || 0) - (booking.advance_amount || 0);
+
+        if (isFolioOpen || due > 0) {
+            toast.error("Unsettled Folio: Please clear the outstanding balance and close the statement before checkout.");
+            setSelectedBooking({ id: booking.id, name: booking.guest_name });
+            return;
+        }
+
+        setLogsLoading(true);
+        const { error: bookingError } = await supabase
+            .from('bookings')
+            .update({ status: 'checked_out' })
+            .eq('id', booking.id);
+
+        if (!bookingError) {
+            await updateRoomStatus(tenant.id, selectedRoom.id, 'dirty');
+            await logHousekeepingAction(tenant.id, {
+                room_id: selectedRoom.id,
+                old_status: selectedRoom.status,
+                new_status: 'dirty',
+                action_type: 'cleaning_request'
+            });
+            toast.success(`Guest checked-out. Room ${selectedRoom.room_number} is now dirty.`);
+            
+            // Refresh state
+            setRooms(prev => prev.map(r => r.id === selectedRoom.id ? { ...r, status: 'dirty' } : r));
+            setSelectedRoom(null);
+        } else {
+            toast.error("Process failed.");
         }
         setLogsLoading(false);
     };
@@ -290,8 +328,8 @@ export function RoomGrid() {
                             <CardContent className="p-7 pt-4 relative">
                                 <div className="flex justify-between items-center mt-4">
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Base Rate</span>
-                                        <span className="text-xl font-black text-white/90">₹{room.base_price}<span className="text-xs text-zinc-500 font-bold">/night</span></span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Base Tariff</span>
+                                        <span className="text-xl font-black text-white/90">₹{room.base_price}<span className="text-xs text-zinc-500 font-bold"> Tariff/night</span></span>
                                     </div>
                                     <Button 
                                         size="sm" 
@@ -309,7 +347,7 @@ export function RoomGrid() {
             </div>
 
             <Dialog open={!!selectedRoom} onOpenChange={(open) => !open && setSelectedRoom(null)}>
-                <DialogContent id={`${roomDetailsId}-content`} className="glass-premium border-white/20 bg-[#0a0a0c]/98 backdrop-blur-3xl text-white rounded-[3rem] p-0 overflow-hidden max-w-2xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)]">
+                <DialogContent id={`${roomDetailsId}-content`} className="glass-premium border-white/20 bg-[#0a0a0c]/98 backdrop-blur-3xl text-white rounded-[2rem] md:rounded-[3rem] p-0 overflow-hidden w-[95vw] max-w-2xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)]">
                     {selectedRoom && (
                         <div className="flex flex-col">
                             {/* Header Section */}
@@ -325,25 +363,25 @@ export function RoomGrid() {
                                     </Badge>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="glass-premium bg-white/[0.02] border-white/5 p-4 rounded-2xl">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+                                    <div className="glass-premium bg-white/[0.02] border-white/5 p-4 rounded-xl md:rounded-2xl">
                                         <div className="flex items-center gap-2 mb-1 text-zinc-500">
                                             <Layers className="w-3.5 h-3.5" />
                                             <span className="text-[9px] font-black uppercase tracking-widest">Category</span>
                                         </div>
                                         <p className="font-black uppercase tracking-tight text-sm text-blue-400">{selectedRoom.type}</p>
                                     </div>
-                                    <div className="glass-premium bg-white/[0.02] border-white/5 p-4 rounded-2xl">
+                                    <div className="glass-premium bg-white/[0.02] border-white/5 p-4 rounded-xl md:rounded-2xl">
                                         <div className="flex items-center gap-2 mb-1 text-zinc-500">
                                             <Info className="w-3.5 h-3.5" />
                                             <span className="text-[9px] font-black uppercase tracking-widest">Floor Level</span>
                                         </div>
                                         <p className="font-black uppercase tracking-tight text-sm">{selectedRoom.floor || "1"}</p>
                                     </div>
-                                    <div className="glass-premium bg-white/[0.02] border-white/5 p-4 rounded-2xl">
+                                    <div className="glass-premium bg-white/[0.02] border-white/5 p-4 rounded-xl md:rounded-2xl">
                                         <div className="flex items-center gap-2 mb-1 text-zinc-500">
                                             <IndianRupee className="w-3.5 h-3.5" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest">Rate</span>
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Daily Tariff</span>
                                         </div>
                                         <p className="font-black uppercase tracking-tight text-sm">₹{selectedRoom.base_price}</p>
                                     </div>
@@ -397,7 +435,7 @@ export function RoomGrid() {
                                         <Sparkles className="w-4 h-4 text-emerald-500" />
                                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Asset Amenities</h3>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                         {amenitiesList.map(amenity => {
                                             const isActive = selectedRoom.amenities?.includes(amenity.id);
                                             return (
@@ -405,7 +443,7 @@ export function RoomGrid() {
                                                     key={amenity.id}
                                                     type="button"
                                                     onClick={() => handleToggleAmenity(amenity.id)}
-                                                    className={`flex items-center gap-2 p-3.5 rounded-2xl border transition-all ${
+                                                    className={`flex items-center gap-2 p-3 md:p-3.5 rounded-xl md:rounded-2xl border transition-all ${
                                                         isActive
                                                             ? 'bg-blue-600/10 border-blue-500/50 text-blue-400 font-bold'
                                                             : 'bg-white/[0.02] border-white/5 text-zinc-600 hover:bg-white/[0.04]'
@@ -424,38 +462,45 @@ export function RoomGrid() {
                                     </div>
                                 </div>
 
-                                <div className="pt-4 flex gap-4">
+                                <div className="pt-4 flex flex-col sm:flex-row gap-4">
                                     <NewBookingDialog 
                                         defaultRoomId={selectedRoom.id}
                                         onSuccess={() => {
                                             toast.success("Reservation confirmed.");
                                             setSelectedRoom(null);
-                                            // Trigger a global refresh if needed, but for now we'll rely on the parent page's refreshKey if this was a larger app. 
-                                            // Simple refresh:
                                             window.location.reload(); 
                                         }}
                                         trigger={
-                                            <Button className="flex-1 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-500/20">
+                                            <Button className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-500/20">
                                                 Check In Guest
                                             </Button>
                                         }
                                     />
                                     {selectedRoom.status === 'occupied' && (selectedRoom as any).activeBooking && (
-                                        <Button 
-                                            onClick={() => setSelectedBooking({ 
-                                                id: (selectedRoom as any).activeBooking.id, 
-                                                name: (selectedRoom as any).activeBooking.guest_name 
-                                            })}
-                                            className="flex-1 h-14 bg-white text-black hover:bg-zinc-200 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-white/10"
-                                        >
-                                            Guest Bill
-                                        </Button>
+                                        <div className="flex w-full gap-3">
+                                            <Button 
+                                                onClick={() => setSelectedBooking({ 
+                                                    id: (selectedRoom as any).activeBooking.id, 
+                                                    name: (selectedRoom as any).activeBooking.guest_name 
+                                                })}
+                                                className="flex-1 h-14 bg-white text-black hover:bg-zinc-200 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-white/10"
+                                            >
+                                                Guest Bill
+                                            </Button>
+                                            <Button 
+                                                onClick={handleCheckOut}
+                                                disabled={logsLoading}
+                                                className="flex-1 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-500/20"
+                                            >
+                                                {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Check Out"}
+                                            </Button>
+                                        </div>
                                     )}
                                     {selectedRoom.status === 'maintenance' ? (
                                         <Button 
                                             onClick={handleCompleteMaintenance}
                                             disabled={logsLoading}
-                                            className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20"
+                                            className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20"
                                         >
                                             {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Complete Maintenance"}
                                         </Button>
@@ -464,7 +509,7 @@ export function RoomGrid() {
                                             onClick={handleRequestCleaning}
                                             disabled={logsLoading || selectedRoom.status === 'dirty' || selectedRoom.status === 'cleaning'}
                                             variant="outline" 
-                                            className="flex-1 h-14 glass-premium border-white/5 text-zinc-400 hover:text-white rounded-2xl font-black uppercase tracking-widest text-[10px]"
+                                            className="w-full h-14 glass-premium border-white/5 text-zinc-400 hover:text-white rounded-2xl font-black uppercase tracking-widest text-[10px]"
                                         >
                                             {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Request Cleaning"}
                                         </Button>
@@ -481,7 +526,12 @@ export function RoomGrid() {
                     <GuestFolio
                         bookingId={selectedBooking.id}
                         guestName={selectedBooking.name}
-                        onClose={() => setSelectedBooking(null)}
+                        onClose={() => {
+                            setSelectedBooking(null);
+                            // No need for a full reload here, but let's re-fetch the room state if needed.
+                            // For simplicity and since we don't have a specific room re-fetcher, let's reload.
+                            window.location.reload();
+                        }}
                     />
                 )}
             </AnimatePresence>

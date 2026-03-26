@@ -8,16 +8,10 @@ import {
     Filter, 
     Loader2, 
     Hotel as HotelIcon,
-    Wifi, 
-    Wind, 
-    Tv, 
-    Coffee, 
-    ShieldCheck, 
-    Mountain, 
-    Waves, 
-    Utensils, 
-    Car, 
-    Gamepad 
+    Wifi, Wind, Tv, Coffee, ShieldCheck, Mountain, Waves, Utensils, Car, Gamepad,
+    Dumbbell, Pizza, Wine, Flower2, WashingMachine, Shirt, Refrigerator, Bell,
+    Microwave, Bath, ShowerHead, Baby, Accessibility, CigaretteOff, PawPrint,
+    Lock, Key, Bike, Bus, Plane, Monitor, Music, Thermometer, Fan, Laptop, Briefcase, Trees
 } from "lucide-react";
 import {
     Dialog,
@@ -74,7 +68,12 @@ export default function RoomsPage() {
     }, [tenant, isOpen, refreshKey]);
 
     const getIcon = (iconName: string) => {
-        const icons: any = { Wifi, Wind, Tv, Coffee, ShieldCheck, Mountain, Waves, Utensils, Car, Gamepad };
+        const icons: any = { 
+            Wifi, Wind, Tv, Coffee, ShieldCheck, Mountain, Waves, Utensils, Car, Gamepad,
+            Dumbbell, Pizza, Wine, Flower2, WashingMachine, Shirt, Refrigerator, Bell,
+            Microwave, Bath, ShowerHead, Baby, Accessibility, CigaretteOff, PawPrint,
+            Lock, Key, Bike, Bus, Plane, Monitor, Music, Thermometer, Fan, Laptop, Briefcase, Trees
+        };
         const Icon = icons[iconName] || Wifi;
         return <Icon className="w-3.5 h-3.5" />;
     };

@@ -22,7 +22,7 @@ export default function AdminHotelsPage() {
         setLoading(true);
         const { data, error } = await supabase
             .from('organizations')
-            .select('*')
+            .select('*, subscription_plans(name)')
             .order('created_at', { ascending: false });
 
         if (data) {
@@ -30,7 +30,7 @@ export default function AdminHotelsPage() {
                 id: h.id,
                 name: h.name,
                 domain: h.subdomain + ".hotelify.com",
-                tier: h.subscription_tier.charAt(0).toUpperCase() + h.subscription_tier.slice(1),
+                tier: h.subscription_plans?.name || (h.subscription_tier ? h.subscription_tier.charAt(0).toUpperCase() + h.subscription_tier.slice(1) : "Starter"),
                 status: h.status || "Active",
                 joined: new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
             })));

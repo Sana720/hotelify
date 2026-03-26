@@ -80,11 +80,11 @@ export function RegisterGuestDialog({ trigger, onSuccess }: RegisterGuestDialogP
                                     <User className="w-5 h-5 text-indigo-400" />
                                 </div>
                                 <DialogTitle className="text-2xl font-black text-white italic tracking-tighter">
-                                    Intelligence Core: Guest Discovery
+                                    Guest Registration Center
                                 </DialogTitle>
                             </div>
                             <DialogDescription className="text-xs font-black uppercase tracking-[0.2em] text-white/30">
-                                Profiling new arrival for automated recognition and loyalty tracking
+                                Profiling new check-in for automated recognition and loyalty tracking
                             </DialogDescription>
                         </DialogHeader>
 

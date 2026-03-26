@@ -54,31 +54,42 @@ import { useRouter, usePathname } from "next/navigation"
 import { useTenant } from "@/components/providers/TenantProvider"
 import { supabase } from "@/lib/supabase"
 
-const manageHotel = [
-    { title: "Settings", url: "/dashboard/settings", icon: Circle },
-    { title: "Billing & Invoices", url: "/dashboard/billing", icon: CreditCard },
-    { title: "Room Type", url: "/dashboard/room-types", icon: Bed },
-    { title: "Rooms", url: "/dashboard/rooms", icon: DoorOpen },
-    { title: "Amenities", url: "/dashboard/amenities", icon: Sparkles },
-    { title: "Housekeeping", url: "/dashboard/cleaning", icon: Sparkles },
+const operations = [
+    { title: "Operations Overview", url: "/dashboard", icon: LayoutDashboard },
     { title: "Guest Registry", url: "/dashboard/guests", icon: UserCheck },
+]
+
+const frontDesk = [
+    { title: "Today's Check-In", url: "/dashboard/bookings/checkin", icon: UserPlus },
+    { title: "Today's Check-Out", url: "/dashboard/bookings/checkout", icon: DoorClosed },
+    { title: "Pending Check-Ins", url: "/dashboard/bookings/pending", icon: Clock },
+    { title: "Delayed Check-Outs", url: "/dashboard/bookings/delayed", icon: Clock },
+]
+
+const reservations = [
+    { title: "Booking Overview", url: "/dashboard/bookings", icon: CalendarPlus },
+    { title: "Booking Requests", url: "/dashboard/bookings/requests", icon: BellRing },
+    { title: "Today's Booked", url: "/dashboard/bookings/today", icon: CalendarCheck },
+    { title: "Upcoming Arrivals", url: "/dashboard/bookings/upcoming-in", icon: CalendarRange },
+    { title: "Upcoming Departures", url: "/dashboard/bookings/upcoming-out", icon: CalendarFold },
+]
+
+const housekeepingItems = [
+    { title: "Room Cleaning", url: "/dashboard/cleaning", icon: Sparkles },
     { title: "Laundry Service", url: "/dashboard/laundry", icon: WashingMachine },
 ]
 
-const manageStaff = [
-    { title: "Staff List", url: "/dashboard/staff", icon: Users },
-    { title: "Attendance", url: "/dashboard/attendance", icon: ClipboardList },
+const inventory = [
+    { title: "Room Inventory", url: "/dashboard/rooms", icon: DoorOpen },
+    { title: "Room Types", url: "/dashboard/room-types", icon: Bed },
+    { title: "Amenities", url: "/dashboard/amenities", icon: Sparkles },
 ]
 
-const acknowledgements = [
-    { title: "Booking Requests", url: "/dashboard/bookings/requests", icon: BellRing },
-    { title: "Todays Booked", url: "/dashboard/bookings/today", icon: CalendarCheck },
-    { title: "Todays Checkin", url: "/dashboard/bookings/checkin", icon: UserPlus },
-    { title: "Pending Check-Ins", url: "/dashboard/bookings/pending", icon: Clock },
-    { title: "Todays Checkout", url: "/dashboard/bookings/checkout", icon: DoorClosed },
-    { title: "Delayed Checkouts", url: "/dashboard/bookings/delayed", icon: Clock },
-    { title: "Upcoming Check-Ins", url: "/dashboard/bookings/upcoming-in", icon: CalendarRange },
-    { title: "Upcoming Checkouts", url: "/dashboard/bookings/upcoming-out", icon: CalendarFold },
+const adminFinance = [
+    { title: "Billing & Invoices", url: "/dashboard/billing", icon: CreditCard },
+    { title: "Staff Directory", url: "/dashboard/staff", icon: Users },
+    { title: "Staff Attendance", url: "/dashboard/attendance", icon: ClipboardList },
+    { title: "Property Settings", url: "/dashboard/settings", icon: Settings },
 ]
 
 export function AppSidebar() {
@@ -119,70 +130,49 @@ export function AppSidebar() {
                 </div>
             </SidebarHeader>
             <SidebarContent className="px-4">
+                {/* --- OPERATIONS & DASHBOARD --- */}
                 <SidebarGroup>
+                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Operations</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {operations.map((item) => (
+                                <SidebarMenuItem key={item.title}>
+                                    <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url} className="h-11 hover:bg-white/5 transition-all group data-[active=true]:bg-blue-600/10 data-[active=true]:text-blue-400">
+                                        <Link href={item.url} className="flex items-center gap-3">
+                                            <item.icon className="w-5 h-5 text-slate-500 group-hover:text-blue-400 group-data-[active=true]:text-blue-400 transition-colors" />
+                                            <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">{item.title}</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* --- FRONT DESK (High Level) --- */}
+                <SidebarGroup className="mt-4">
+                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Front Desk</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Dashboard" className="h-11 bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 hover:text-blue-300 transition-all duration-300" isActive={pathname === "/dashboard"}>
-                                    <Link href="/dashboard" className="flex items-center gap-3">
-                                        <LayoutDashboard className="w-5 h-5" />
-                                        <span className="font-bold uppercase tracking-widest text-[10px]">Dashboard</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-
-                            {/* Manage Hotel Dropdown */}
-                            <SidebarMenuItem className="mt-4">
                                 <Collapsible defaultOpen className="group/collapsible">
                                     <CollapsibleTrigger asChild>
                                         <SidebarMenuButton className="h-11 hover:bg-white/5 transition-all group w-full justify-between">
                                             <div className="flex items-center gap-3">
-                                                <Hotel className="w-5 h-5 group-hover:text-white transition-colors" />
-                                                <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">Manage Hotel</span>
+                                                <UserPlus className="w-5 h-5 group-hover:text-white transition-colors" />
+                                                <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">Arrivals & Departures</span>
                                             </div>
                                             <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-white transition-all duration-300 group-data-[state=open]/collapsible:rotate-180" />
                                         </SidebarMenuButton>
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub className="border-l border-white/5 ml-4">
-                                            {manageHotel.map((item) => {
-                                                const Icon = item.icon;
-                                                return (
-                                                    <SidebarMenuSubItem key={item.title}>
-                                                        <SidebarMenuSubButton asChild isActive={pathname === item.url} className="hover:bg-white/5 group">
-                                                            <Link href={item.url} className="flex items-center gap-3">
-                                                                <Icon className="w-2.5 h-2.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
-                                                                <span className="text-[11px] font-medium text-slate-400 group-hover:text-white transition-colors">{item.title}</span>
-                                                            </Link>
-                                                        </SidebarMenuSubButton>
-                                                    </SidebarMenuSubItem>
-                                                );
-                                            })}
-                                        </SidebarMenuSub>
-                                    </CollapsibleContent>
-                                </Collapsible>
-                            </SidebarMenuItem>
-
-                            {/* Manage Staff Dropdown */}
-                            <SidebarMenuItem>
-                                <Collapsible className="group/collapsible">
-                                    <CollapsibleTrigger asChild>
-                                        <SidebarMenuButton className="h-11 hover:bg-white/5 transition-all group w-full justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <Users className="w-5 h-5 group-hover:text-white transition-colors" />
-                                                <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">Manage Staff</span>
-                                            </div>
-                                            <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-white transition-all duration-300 group-data-[state=open]/collapsible:rotate-180" />
-                                        </SidebarMenuButton>
-                                    </CollapsibleTrigger>
-                                    <CollapsibleContent>
-                                        <SidebarMenuSub className="border-l border-white/5 ml-4">
-                                            {manageStaff.map((item) => (
+                                            {frontDesk.map((item) => (
                                                 <SidebarMenuSubItem key={item.title}>
-                                                    <SidebarMenuSubButton asChild className="hover:bg-white/5 group">
+                                                    <SidebarMenuSubButton asChild isActive={pathname === item.url} className="hover:bg-white/5 group h-9">
                                                         <Link href={item.url} className="flex items-center gap-3">
-                                                            <Circle className="w-2.5 h-2.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
-                                                            <span className="text-[11px] font-medium text-slate-400 group-hover:text-white transition-colors">{item.title}</span>
+                                                            <item.icon className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                                                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase tracking-widest">{item.title}</span>
                                                         </Link>
                                                     </SidebarMenuSubButton>
                                                 </SidebarMenuSubItem>
@@ -195,16 +185,17 @@ export function AppSidebar() {
                     </SidebarGroupContent>
                 </SidebarGroup>
 
-                <SidebarGroup className="mt-6">
-                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Acknowledgement</SidebarGroupLabel>
+                {/* --- RESERVATIONS --- */}
+                <SidebarGroup className="mt-4">
+                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Reservations</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {acknowledgements.map((item) => (
+                            {reservations.map((item) => (
                                 <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url} className="h-10 hover:bg-white/5 transition-all group">
+                                    <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url} className="h-10 hover:bg-white/5 transition-all group data-[active=true]:text-emerald-400">
                                         <Link href={item.url} className="flex items-center gap-3">
-                                            <item.icon className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors" />
-                                            <span className="text-[11px] font-bold text-slate-400 group-hover:text-white transition-colors">{item.title}</span>
+                                            <item.icon className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-data-[active=true]:text-emerald-400 transition-colors" />
+                                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase tracking-widest">{item.title}</span>
                                         </Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
@@ -213,17 +204,92 @@ export function AppSidebar() {
                     </SidebarGroupContent>
                 </SidebarGroup>
 
-                <SidebarGroup className="mt-4 mb-8">
-                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Booking</SidebarGroupLabel>
+                {/* --- HOUSEKEEPING & SERVICES --- */}
+                <SidebarGroup className="mt-4">
+                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Housekeeping & Services</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {housekeepingItems.map((item) => (
+                                <SidebarMenuItem key={item.title}>
+                                    <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url} className="h-10 hover:bg-white/5 transition-all group">
+                                        <Link href={item.url} className="flex items-center gap-3">
+                                            <item.icon className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase tracking-widest">{item.title}</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* --- INVENTORY --- */}
+                <SidebarGroup className="mt-4">
+                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Inventory Management</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild isActive={pathname === "/dashboard/bookings"} className="h-10 hover:bg-white/5 transition-all group">
-                                    <Link href="/dashboard/bookings" className="flex items-center gap-3">
-                                        <CalendarPlus className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition-colors" />
-                                        <span className="text-[11px] font-bold text-slate-400 group-hover:text-white transition-colors">Booking Overview</span>
-                                    </Link>
-                                </SidebarMenuButton>
+                                <Collapsible className="group/collapsible">
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuButton className="h-11 hover:bg-white/5 transition-all group w-full justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Hotel className="w-5 h-5 group-hover:text-white transition-colors" />
+                                                <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">Assets & Rooms</span>
+                                            </div>
+                                            <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-white transition-all duration-300 group-data-[state=open]/collapsible:rotate-180" />
+                                        </SidebarMenuButton>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <SidebarMenuSub className="border-l border-white/5 ml-4">
+                                            {inventory.map((item) => (
+                                                <SidebarMenuSubItem key={item.title}>
+                                                    <SidebarMenuSubButton asChild isActive={pathname === item.url} className="hover:bg-white/5 group h-9">
+                                                        <Link href={item.url} className="flex items-center gap-3">
+                                                            <item.icon className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                                                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase tracking-widest">{item.title}</span>
+                                                        </Link>
+                                                    </SidebarMenuSubButton>
+                                                </SidebarMenuSubItem>
+                                            ))}
+                                        </SidebarMenuSub>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* --- ADMIN & FINANCE --- */}
+                <SidebarGroup className="mt-4 mb-8">
+                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Administration</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <Collapsible className="group/collapsible">
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuButton className="h-11 hover:bg-white/5 transition-all group w-full justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Settings className="w-5 h-5 group-hover:text-white transition-colors" />
+                                                <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">Org & Finance</span>
+                                            </div>
+                                            <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-white transition-all duration-300 group-data-[state=open]/collapsible:rotate-180" />
+                                        </SidebarMenuButton>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <SidebarMenuSub className="border-l border-white/5 ml-4">
+                                            {adminFinance.map((item) => (
+                                                <SidebarMenuSubItem key={item.title}>
+                                                    <SidebarMenuSubButton asChild isActive={pathname === item.url} className="hover:bg-white/5 group h-9">
+                                                        <Link href={item.url} className="flex items-center gap-3">
+                                                            <item.icon className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                                                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase tracking-widest">{item.title}</span>
+                                                        </Link>
+                                                    </SidebarMenuSubButton>
+                                                </SidebarMenuSubItem>
+                                            ))}
+                                        </SidebarMenuSub>
+                                    </CollapsibleContent>
+                                </Collapsible>
                             </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarGroupContent>

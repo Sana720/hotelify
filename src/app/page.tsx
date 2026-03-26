@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function LandingPage() {
   const [activeStep, setActiveStep] = useState(0);
@@ -79,10 +80,10 @@ export default function LandingPage() {
                 transition={{ delay: 0.5, duration: 0.8 }}
                 className="flex flex-col sm:flex-row items-center gap-6"
               >
-                <button className="w-full sm:w-auto px-12 py-6 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 transition-all shadow-2xl flex items-center justify-center gap-3">
+                <Link href="/signup" className="w-full sm:w-auto px-12 py-6 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 transition-all shadow-2xl flex items-center justify-center gap-3">
                   Start Your Free Trial
                   <ArrowRight className="w-5 h-5" />
-                </button>
+                </Link>
                 <motion.div
                   className="flex items-center gap-4 bg-white/5 border border-white/10 px-6 py-4 rounded-3xl backdrop-blur-xl"
                 >
@@ -653,9 +654,9 @@ function PricingCard({ tier, price, description, features, highlights = false }:
           </li>
         ))}
       </ul>
-      <button className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all ${highlights ? 'bg-primary text-primary-foreground primary-glow hover:scale-[1.03]' : 'glass-premium hover:bg-white/10'}`}>
+      <Link href="/signup" className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all flex items-center justify-center ${highlights ? 'bg-primary text-primary-foreground primary-glow hover:scale-[1.03]' : 'glass-premium hover:bg-white/10'}`}>
         Secure My License
-      </button>
+      </Link>
     </div>
   );
 }

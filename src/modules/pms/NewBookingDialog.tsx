@@ -66,6 +66,7 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
         aadhaar_number: "",
         company_name: "",
         company_gst: "",
+        company_address: "",
         room_id: "", // Will be set from Step 2
         gst_applied: false,
         payment_method: "Cash",
@@ -108,6 +109,7 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                 aadhaar_number: "",
                 company_name: "",
                 company_gst: "",
+                company_address: "",
                 room_id: "",
                 gst_applied: false,
                 payment_method: "Cash",
@@ -227,14 +229,15 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
         const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
         
         const sub = Number(room.base_price) * nights;
-        const tax = formData.gst_applied ? (sub * (taxPercentage / 100)) : 0;
+        const isTaxApplicable = guestType === 'corporate' || formData.gst_applied;
+        const tax = isTaxApplicable ? (sub * (taxPercentage / 100)) : 0;
         
         return {
             subtotal: sub,
             taxAmount: tax,
             totalAmount: sub + tax
         };
-    }, [formData.room_id, searchData.check_in, searchData.check_out, formData.gst_applied, availableRooms, taxPercentage]);
+    }, [availableRooms, formData.room_id, formData.gst_applied, guestType, searchData.check_in, searchData.check_out, taxPercentage]);
 
     const handleCreateBooking = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -261,7 +264,7 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
         }
 
         // 2. Insert Booking
-        const { error } = await supabase
+        const { data: newBooking, error } = await supabase
             .from('bookings')
             .insert([{
                 guest_name: formData.guest_name,
@@ -282,51 +285,43 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                 guest_type: guestType,
                 company_name: guestType === 'corporate' ? formData.company_name : null,
                 company_gst: guestType === 'corporate' ? formData.company_gst : null,
+                company_address: guestType === 'corporate' ? formData.company_address : null,
                 gst_applied: guestType === 'corporate' ? true : formData.gst_applied,
                 status: 'confirmed'
-            }]);
+            }])
+            .select()
+            .single();
 
-        if (!error) {
+        if (!error && newBooking) {
             // 3. Create Folio & Post Initial Charge
-            const { data: newBooking } = await supabase
-                .from('bookings')
-                .select('id')
-                .eq('org_id', tenant.id)
-                .eq('phone', formData.phone)
-                .order('created_at', { ascending: false })
-                .limit(1)
+            const { data: folio, error: folioError } = await supabase
+                .from('folios')
+                .insert([{
+                    org_id: tenant.id,
+                    booking_id: newBooking.id,
+                    status: 'open',
+                    total_amount: Number(totalAmount) || 0
+                }])
+                .select()
                 .single();
 
-            if (newBooking) {
-                const { data: folio, error: folioError } = await supabase
-                    .from('folios')
+            if (folioError) console.error("Initial Folio Error:", folioError);
+
+            if (folio) {
+                const roomInfo = availableRooms.find((r: any) => r.id === formData.room_id);
+                const roomDesc = roomInfo ? `Room Accommodation — Room ${roomInfo.room_number}` : 'Room Accommodation Charge';
+                
+                const { error: itemError } = await supabase
+                    .from('folio_items')
                     .insert([{
                         org_id: tenant.id,
-                        booking_id: newBooking.id,
-                        status: 'open',
-                        total_amount: Number(totalAmount) || 0
-                    }])
-                    .select()
-                    .single();
-
-                if (folioError) console.error("Initial Folio Error:", folioError);
-
-                if (folio) {
-                    const roomInfo = availableRooms.find((r: any) => r.id === formData.room_id);
-                    const roomDesc = roomInfo ? `Room Accommodation — Room ${roomInfo.room_number}` : 'Room Accommodation Charge';
-                    
-                    const { error: itemError } = await supabase
-                        .from('folio_items')
-                        .insert([{
-                            org_id: tenant.id,
-                            folio_id: folio.id,
-                            description: roomDesc,
-                            amount: Number(totalAmount) || 0,
-                            type: 'accommodation'
-                        }]);
-                    
-                    if (itemError) console.error("Initial Folio Item Error:", itemError);
-                }
+                        folio_id: folio.id,
+                        description: roomDesc,
+                        amount: Number(totalAmount) || 0,
+                        type: 'accommodation'
+                    }]);
+                
+                if (itemError) console.error("Initial Folio Item Error:", itemError);
             }
 
             await supabase
@@ -337,8 +332,10 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
             setIsOpen(false);
             if (onSuccess) onSuccess();
         } else {
-            console.error("Booking Error:", error);
-            alert("Failed to create booking.");
+            const errorMsg = (error as any)?.message || "Unknown Error";
+            console.error("Booking Error Detailed:", JSON.stringify(error, null, 2));
+            console.error("Booking Error Message:", errorMsg);
+            alert(`Failed to create booking: ${errorMsg}`);
         }
         setIsLoading(false);
     };
@@ -378,7 +375,7 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Arrival Date <span className="text-red-500">*</span></Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Check-In Date <span className="text-red-500">*</span></Label>
                                 <Input
                                     type="date"
                                     value={searchData.check_in}
@@ -388,7 +385,7 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Departure Date <span className="text-red-500">*</span></Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Check-Out Date <span className="text-red-500">*</span></Label>
                                 <Input
                                     type="date"
                                     value={searchData.check_out}
@@ -480,7 +477,7 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                                         </div>
                                         <div className="flex items-end justify-between pt-4 border-t border-white/5">
                                             <div className="flex flex-col">
-                                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Base Rate</span>
+                                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Base Tariff</span>
                                                 <span className="text-xl font-black text-white">₹{room.base_price.toLocaleString()}</span>
                                             </div>
                                             <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 transition-all duration-500">
@@ -603,6 +600,15 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                                         placeholder="GSTIN..."
                                         value={formData.company_gst}
                                         onChange={e => setFormData({ ...formData, company_gst: e.target.value })}
+                                        className="h-9 bg-[#0d0d0f] border-white/10 text-xs"
+                                    />
+                                </div>
+                                <div className="space-y-2 col-span-full">
+                                    <Label className="text-[8px] font-black uppercase tracking-widest text-indigo-400">Corporate Registered Address</Label>
+                                    <Input
+                                        placeholder="Full address for invoice..."
+                                        value={formData.company_address}
+                                        onChange={e => setFormData({ ...formData, company_address: e.target.value })}
                                         className="h-9 bg-[#0d0d0f] border-white/10 text-xs"
                                     />
                                 </div>

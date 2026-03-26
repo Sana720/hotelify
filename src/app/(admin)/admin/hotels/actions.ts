@@ -10,6 +10,7 @@ export async function provisionHotel(formData: {
     adminEmail: string;
     adminName: string;
     tier: string;
+    planId: string;
 }) {
     const cookieStore = await cookies();
     
@@ -37,7 +38,9 @@ export async function provisionHotel(formData: {
             .insert([{
                 name: formData.name,
                 subdomain: formData.subdomain.toLowerCase().replace(/\s+/g, '-'),
-                subscription_tier: formData.tier
+                subscription_tier: formData.tier,
+                plan_id: formData.planId,
+                status: 'Trial'
             }])
             .select()
             .single();

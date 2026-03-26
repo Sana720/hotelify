@@ -10,11 +10,11 @@ const configMap: Record<string, { title: string; icon: any; color: string }> = {
     requests: { title: "Booking Requests", icon: BellRing, color: "text-blue-400" },
     today: { title: "Today's Schedule", icon: CalendarDays, color: "text-indigo-400" },
     checkin: { title: "Today's Check-ins", icon: UserCheck, color: "text-emerald-400" },
-    pending: { title: "Pending Arrivals", icon: History, color: "text-amber-400" },
+    pending: { title: "Pending Check-Ins", icon: History, color: "text-amber-400" },
     checkout: { title: "Today's Check-outs", icon: UserMinus, color: "text-red-400" },
     delayed: { title: "Delayed Check-outs", icon: Clock, color: "text-rose-500" },
-    "upcoming-in": { title: "Upcoming Arrivals", icon: CalendarRange, color: "text-purple-400" },
-    "upcoming-out": { title: "Upcoming Departures", icon: CalendarFold, color: "text-blue-500" },
+    "upcoming-in": { title: "Upcoming Check-Ins", icon: CalendarRange, color: "text-purple-400" },
+    "upcoming-out": { title: "Upcoming Check-Outs", icon: CalendarFold, color: "text-blue-500" },
 };
 
 export default function BookingFilterPage({ params }: { params: Promise<{ type: string }> }) {

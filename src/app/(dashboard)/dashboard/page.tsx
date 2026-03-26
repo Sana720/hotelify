@@ -159,8 +159,8 @@ export default function DashboardPage() {
     return (
         <div className="space-y-8 pb-12 animate-in fade-in duration-700">
             {/* Header / Search Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
-                <div className="relative w-full max-w-md group">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-white/5">
+                <div className="relative w-full max-w-md group order-2 lg:order-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-blue-500 transition-colors" />
                     <input
                         type="text"
@@ -169,17 +169,22 @@ export default function DashboardPage() {
                     />
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <button className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-all">
-                        <Bell className="w-5 h-5" />
-                    </button>
-                    <button className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-all relative">
-                        <Mail className="w-5 h-5" />
-                        <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0a0a0c]" />
-                    </button>
-                    <div className="w-px h-8 bg-white/10 mx-2" />
-                    <div className="flex items-center gap-3 pl-2 group cursor-pointer">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black">
+                <div className="flex items-center justify-between lg:justify-end gap-4 order-1 lg:order-2">
+                    <div className="flex items-center gap-3">
+                        <button className="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-all">
+                            <Bell className="w-5 h-5" />
+                        </button>
+                        <button className="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-all relative">
+                            <Mail className="w-5 h-5" />
+                            <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0a0a0c]" />
+                        </button>
+                    </div>
+                    <div className="hidden sm:block w-px h-8 bg-white/10 mx-2" />
+                    <div className="flex items-center gap-3 group cursor-pointer">
+                        <div className="hidden sm:block text-right">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-white/90">{tenant.name}</div>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/20">
                             {tenant.name.charAt(0).toUpperCase()}
                         </div>
                     </div>
@@ -187,19 +192,21 @@ export default function DashboardPage() {
             </div>
 
             {/* Title and Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-2xl font-black tracking-tight text-white uppercase italic">{tenant.name} Overview</h1>
-                    <div className="flex items-center gap-2 mt-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                <div className="space-y-1">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white uppercase italic leading-none">{tenant.name} Overview</h1>
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
                         <Home className="w-3 h-3" />
                         <span>Command Center</span>
+                        <span className="mx-1 text-white/10">•</span>
+                        <span className="text-blue-500/60">Live Analytics</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <NewBookingDialog 
                         onSuccess={() => setRefreshKey(prev => prev + 1)}
                         trigger={
-                            <Button className="h-12 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">
+                            <Button className="h-14 sm:h-12 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">
                                 <CalendarPlus className="w-4 h-4" />
                                 Book Room
                             </Button>
@@ -208,7 +215,7 @@ export default function DashboardPage() {
                     <RegisterGuestDialog 
                         onSuccess={() => setRefreshKey(prev => prev + 1)}
                         trigger={
-                            <Button className="h-12 px-6 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-all">
+                            <Button className="h-14 sm:h-12 px-6 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-all">
                                 <UserPlus className="w-4 h-4" />
                                 Register New Guest
                             </Button>

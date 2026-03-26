@@ -10,7 +10,8 @@ export default function AdminDashboardPage() {
         totalHotels: 0,
         platformRevenue: "₹0",
         activeUsers: 0,
-        systemLoad: "Normal"
+        systemLoad: "Normal",
+        mix: { Enterprise: 0, Professional: 0, Essential: 0 }
     });
     const [recentHotels, setRecentHotels] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -24,10 +25,10 @@ export default function AdminDashboardPage() {
                 .from('organizations')
                 .select('*', { count: 'exact', head: true });
 
-            // 2. Fetch Recent Registrations
+            // 2. Fetch Recent Registrations with Plan Details
             const { data: hotels } = await supabase
                 .from('organizations')
-                .select('*')
+                .select('*, subscription_plans(name)')
                 .order('created_at', { ascending: false })
                 .limit(3);
 
@@ -36,18 +37,47 @@ export default function AdminDashboardPage() {
                 .from('staff')
                 .select('*', { count: 'exact', head: true });
 
+            // 4. Fetch Real Revenue
+            const { data: billingData } = await supabase
+                .from('platform_billing')
+                .select('amount')
+                .eq('status', 'paid');
+            
+            const totalRevenue = billingData?.reduce((sum, record) => sum + Number(record.amount), 0) || 0;
+
+            // 5. Fetch Subscription Mix
+            const { data: allHotels } = await supabase
+                .from('organizations')
+                .select('subscription_plans(name)');
+            
+            const mix = {
+                Enterprise: 0,
+                Professional: 0,
+                Essential: 0
+            };
+
+            allHotels?.forEach(h => {
+                const name = (h.subscription_plans as any)?.name;
+                if (name === 'Enterprise') mix.Enterprise++;
+                else if (name === 'Professional') mix.Professional++;
+                else if (name === 'Essential') mix.Essential++;
+            });
+
+            const totalOrgs = allHotels?.length || 1;
+
             setStats({
                 totalHotels: hotelCount || 0,
-                platformRevenue: "₹45.2L", // Mock for now until billing table is ready
+                platformRevenue: `₹${(totalRevenue / 100000).toFixed(1)}L`,
                 activeUsers: staffCount || 0,
-                systemLoad: "24%"
+                systemLoad: "Optimal",
+                mix: mix
             });
 
             setRecentHotels(hotels?.map(h => ({
                 name: h.name,
-                domain: h.subdomain + ".hotelify.com",
-                tier: h.subscription_tier.charAt(0).toUpperCase() + h.subscription_tier.slice(1),
-                status: "Active"
+                domain: h.subdomain + ".hotelify.app",
+                tier: (h.subscription_plans as any)?.name || 'Trial',
+                status: h.subscription_status === 'active' ? 'Active' : 'Trial'
             })) || []);
 
             setLoading(false);
@@ -136,9 +166,9 @@ export default function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4 pt-4">
-                            <SubscriptionMetric label="Enterprise" percentage={45} color="bg-blue-500" />
-                            <SubscriptionMetric label="Professional" percentage={35} color="bg-purple-500" />
-                            <SubscriptionMetric label="Essential" percentage={20} color="bg-zinc-500" />
+                            <SubscriptionMetric label="Enterprise" percentage={Math.round(((stats?.mix?.Enterprise || 0) / (stats.totalHotels || 1)) * 100)} color="bg-blue-500" />
+                            <SubscriptionMetric label="Professional" percentage={Math.round(((stats?.mix?.Professional || 0) / (stats.totalHotels || 1)) * 100)} color="bg-purple-500" />
+                            <SubscriptionMetric label="Essential" percentage={Math.round(((stats?.mix?.Essential || 0) / (stats.totalHotels || 1)) * 100)} color="bg-zinc-500" />
                         </div>
                     </CardContent>
                 </Card>

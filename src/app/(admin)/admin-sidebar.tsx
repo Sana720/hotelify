@@ -8,7 +8,8 @@ import {
     Settings,
     ShieldCheck,
     Globe,
-    LogOut
+    LogOut,
+    Package
 } from "lucide-react"
 
 import {
@@ -36,12 +37,13 @@ interface SidebarItem {
 
 const items: SidebarItem[] = [
     { title: "Overview", url: "/admin", icon: LayoutDashboard },
+    { title: "Leads", url: "/admin/leads", icon: Users },
     { title: "Hotels", url: "/admin/hotels", icon: Building2 },
-    // { title: "System Users", url: "/admin/users", icon: Users },
+    { title: "Packages", url: "/admin/packages", icon: Package },
 ]
 
 const system: SidebarItem[] = [
-    // { title: "Subscriptions", url: "/admin/subscriptions", icon: CreditCard },
+    { title: "Billing Ledger", url: "/admin/billing", icon: CreditCard },
     // { title: "Domains", url: "/admin/domains", icon: Globe },
     // { title: "Settings", url: "/admin/settings", icon: Settings },
 ]

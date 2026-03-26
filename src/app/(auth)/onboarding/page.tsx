@@ -27,14 +27,13 @@ export default function OnboardingPage() {
         floors: 3,
         propertyType: "Boutique",
         hotelName: "",
-        subdomain: "",
     });
     const [isLaunching, setIsLaunching] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const nextStep = () => {
-        if (step === 1 && (!config.hotelName || !config.subdomain)) {
-            setError("Please provide a hotel name and subdomain.");
+        if (step === 1 && !config.hotelName) {
+            setError("Please provide a hotel name.");
             return;
         }
         setError(null);
@@ -50,11 +49,12 @@ export default function OnboardingPage() {
             if (!user) throw new Error("No authenticated user found.");
 
             // 1. Create Organization
+            const generatedSubdomain = config.hotelName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
             const { data: org, error: orgError } = await supabase
                 .from('organizations')
                 .insert({
                     name: config.hotelName,
-                    subdomain: config.subdomain.toLowerCase().replace(/\s+/g, '-'),
+                    subdomain: generatedSubdomain,
                     subscription_tier: 'essential'
                 })
                 .select()
@@ -93,6 +93,12 @@ export default function OnboardingPage() {
                 });
 
             if (policyError) throw policyError;
+
+            // 5. Update Lead Status
+            await supabase
+                .from('leads')
+                .update({ status: 'Converted' })
+                .eq('email', user.email!);
 
             // Determine redirect URL
             const protocol = window.location.protocol;
@@ -150,18 +156,6 @@ export default function OnboardingPage() {
                                         value={config.hotelName}
                                         onChange={(e) => setConfig({ ...config, hotelName: e.target.value })}
                                     />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400">Subdomain</Label>
-                                    <div className="relative">
-                                        <Input 
-                                            placeholder="grandroyal" 
-                                            className="h-14 bg-white/5 border-white/5 rounded-2xl pr-24"
-                                            value={config.subdomain}
-                                            onChange={(e) => setConfig({ ...config, subdomain: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                                        />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">.hotelify.io</div>
-                                    </div>
                                 </div>
                             </div>
 

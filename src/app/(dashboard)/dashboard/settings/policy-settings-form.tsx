@@ -112,7 +112,7 @@ export function PolicySettingsForm() {
                     <div className="grid grid-cols-2 gap-6 p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors" />
                         <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Arrival Time</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Standard Check-In Time</Label>
                             <Input
                                 type="time"
                                 value={formData.check_in_time}
@@ -121,7 +121,7 @@ export function PolicySettingsForm() {
                             />
                         </div>
                         <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Departure Time</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Standard Check-Out Time</Label>
                             <Input
                                 type="time"
                                 value={formData.check_out_time}

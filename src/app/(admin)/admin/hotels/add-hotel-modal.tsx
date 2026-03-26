@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
     Dialog,
@@ -32,7 +32,28 @@ interface AddHotelModalProps {
 
 export function AddHotelModal({ isOpen, onClose, onSuccess }: AddHotelModalProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const [fetchingPlans, setFetchingPlans] = useState(true);
+    const [plans, setPlans] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        async function fetchPlans() {
+            try {
+                const { data, error } = await supabase
+                    .from('subscription_plans')
+                    .select('*')
+                    .order('price_monthly', { ascending: true });
+
+                if (error) throw error;
+                setPlans(data || []);
+            } catch (err) {
+                console.error("Failed to fetch plans:", err);
+            } finally {
+                setFetchingPlans(false);
+            }
+        }
+        if (isOpen) fetchPlans();
+    }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -44,7 +65,10 @@ export function AddHotelModal({ isOpen, onClose, onSuccess }: AddHotelModalProps
         const subdomain = formData.get("subdomain") as string;
         const adminEmail = formData.get("adminEmail") as string;
         const adminName = formData.get("adminName") as string;
-        const tier = formData.get("tier") as string;
+        const planId = formData.get("tier") as string;
+        
+        // Find the plan object to get its name for backward compatibility
+        const selectedPlan = plans.find(p => p.id === planId);
 
         try {
             const result = await provisionHotel({
@@ -52,7 +76,8 @@ export function AddHotelModal({ isOpen, onClose, onSuccess }: AddHotelModalProps
                 subdomain,
                 adminEmail,
                 adminName,
-                tier
+                tier: selectedPlan?.name || "Essential",
+                planId: planId
             });
 
             if (!result.success) {
@@ -132,14 +157,26 @@ export function AddHotelModal({ isOpen, onClose, onSuccess }: AddHotelModalProps
 
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Subscription Tier</Label>
-                            <Select name="tier" defaultValue="essential">
+                            <Select name="tier" defaultValue={plans[0]?.id}>
                                 <SelectTrigger className="h-12 bg-white/[0.02] border-white/5 rounded-xl text-sm focus:ring-blue-500/20">
-                                    <SelectValue placeholder="Select Plan" />
+                                    <SelectValue placeholder={fetchingPlans ? "Loading Plans..." : "Select Plan"} />
                                 </SelectTrigger>
                                 <SelectContent className="glass-premium border-white/10 bg-[#0A0A0A] text-white">
-                                    <SelectItem value="essential">Essential (Standard)</SelectItem>
-                                    <SelectItem value="professional">Professional (Elite)</SelectItem>
-                                    <SelectItem value="enterprise">Enterprise (Custom)</SelectItem>
+                                    {fetchingPlans ? (
+                                        <div className="p-4 flex items-center justify-center">
+                                            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                                        </div>
+                                    ) : plans.length > 0 ? (
+                                        plans.map((plan) => (
+                                            <SelectItem key={plan.id} value={plan.id}>
+                                                {plan.name} (₹{plan.price_monthly})
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 text-[10px] font-bold text-zinc-500 uppercase text-center">
+                                            No plans found. Sync required.
+                                        </div>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>

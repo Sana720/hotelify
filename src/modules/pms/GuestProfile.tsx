@@ -117,7 +117,7 @@ export function GuestProfile({ guest, onClose }: GuestProfileProps) {
                         <div className="p-8 text-center border-r border-white/5">
                             <div className="flex items-center justify-center gap-2 mb-2 text-zinc-500">
                                 <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Lifetime Value</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest">Total Revenue (Tariff)</span>
                             </div>
                             <p className="text-2xl font-black text-white">₹{stats.totalSpend.toLocaleString()}</p>
                         </div>
@@ -173,7 +173,7 @@ export function GuestProfile({ guest, onClose }: GuestProfileProps) {
                                         </div>
                                         <div className="text-right">
                                             <p className="text-lg font-black text-white/90">₹{Number(stay.total_price).toLocaleString()}</p>
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-zinc-600">Settled Amount</p>
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-zinc-600">Stay Tariff Settled</p>
                                         </div>
                                     </motion.div>
                                 ))

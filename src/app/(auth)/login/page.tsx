@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Mail, Lock, ShieldCheck, UserCircle2 } from "lucide-react";
+import { ArrowRight, Mail, Lock, ShieldCheck, UserCircle2, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [loginType, setLoginType] = useState<'manager' | 'staff'>('manager');
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -102,11 +103,18 @@ export default function LoginPage() {
                             <Input
                                 id="password"
                                 name="password"
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 placeholder="••••••••"
-                                className="pl-12 h-14 bg-white/[0.02] border-white/5 rounded-2xl focus:ring-blue-500/20 focus:border-blue-500/40 transition-all text-white placeholder:text-zinc-800 font-medium"
+                                className="pl-12 pr-12 h-14 bg-white/[0.02] border-white/5 rounded-2xl focus:ring-blue-500/20 focus:border-blue-500/40 transition-all text-white placeholder:text-zinc-800 font-medium"
                                 required
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-blue-400 transition-colors"
+                            >
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                         </div>
                     </div>
 

@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTenant } from "@/components/providers/TenantProvider";
 import { supabase } from "@/lib/supabase";
 import { GuestFolio } from "./GuestFolio";
+import { toast } from "sonner";
 
 interface Booking {
     id: string;
@@ -20,6 +21,7 @@ interface Booking {
     total_price: number;
     advance_amount: number;
     room_number?: string;
+    folios?: { status: string }[];
 }
 
 const statusConfig = {
@@ -70,11 +72,14 @@ export function BookingList({ filterType }: { filterType?: string }) {
 
     const handleCheckOut = async (bookingId: string, booking: any) => {
         if (!tenant) return;
-        
+        // Enforce Settlement: If folio exists and is not closed, or if there's a simple balance due
+        const isFolioOpen = booking.folios && booking.folios.length > 0 && booking.folios[0].status !== 'closed';
         const due = (booking.total_price || 0) - (booking.advance_amount || 0);
-        if (due > 0) {
-            const confirmed = window.confirm(`Guest still owes ₹${due.toLocaleString()}. Please clear the due amount before checkout. Proceed anyway?`);
-            if (!confirmed) return;
+
+        if (isFolioOpen || due > 0) {
+            toast.error("Unsettled Folio: Please clear the outstanding balance and close the statement before checkout.");
+            setSelectedBooking({ id: booking.id, name: booking.guest_name });
+            return;
         }
 
         setLoading(true);
@@ -116,7 +121,7 @@ export function BookingList({ filterType }: { filterType?: string }) {
             
             let query = supabase
                 .from('bookings')
-                .select('*, rooms (room_number)')
+                .select('*, rooms (room_number), folios (status)')
                 .eq('org_id', tenant?.id);
 
             if (filterType === 'requests') {
@@ -137,7 +142,7 @@ export function BookingList({ filterType }: { filterType?: string }) {
                 query = query.gt('check_out', today).eq('status', 'checked_in');
             }
 
-            const { data, error } = await query.order('check_in', { ascending: false });
+            const { data, error } = await query.order('created_at', { ascending: false });
 
             if (data) {
                 setBookings(data.map((b: any) => ({
@@ -176,7 +181,11 @@ export function BookingList({ filterType }: { filterType?: string }) {
                     <GuestFolio
                         bookingId={selectedBooking.id}
                         guestName={selectedBooking.name}
-                        onClose={() => setSelectedBooking(null)}
+                        onClose={() => {
+                            setSelectedBooking(null);
+                            // Refresh bookings to reflect new folio status
+                            window.location.reload(); 
+                        }}
                     />
                 )}
             </AnimatePresence>
@@ -228,7 +237,14 @@ export function BookingList({ filterType }: { filterType?: string }) {
                                             </div>
                                         </div>
                                         
-                                        {((booking.total_price || 0) - (booking.advance_amount || 0)) > 0 && (
+                                        {booking.folios?.[0]?.status === 'closed' ? (
+                                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex justify-between items-center shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                                                <span className="text-[9px] text-emerald-400 font-black uppercase tracking-widest">Digital Invoice</span>
+                                                <span className="text-[11px] font-black text-white leading-none uppercase tracking-tighter bg-emerald-500/20 px-2 py-1 rounded-md">
+                                                    Paid & Settled
+                                                </span>
+                                            </div>
+                                        ) : ((booking.total_price || 0) - (booking.advance_amount || 0)) > 0 && (
                                             <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-3 flex justify-between items-center animate-pulse">
                                                 <span className="text-[9px] text-red-400 font-black uppercase tracking-widest">Balance Due</span>
                                                 <span className="text-base font-black text-white leading-none">

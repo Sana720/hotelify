@@ -15,7 +15,7 @@ export default function BookingsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-4xl font-black tracking-tight text-white uppercase">Reservations</h1>
-                    <p className="text-zinc-400 font-medium mt-1 uppercase tracking-widest text-[10px]">Managing the guest journey from arrival to departure.</p>
+                    <p className="text-zinc-400 font-medium mt-1 uppercase tracking-widest text-[10px]">Managing the guest journey from check-in to check-out.</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <Button variant="outline" className="glass-premium border-white/5 h-12 px-6 rounded-2xl gap-2 font-black uppercase tracking-widest text-[10px]">
