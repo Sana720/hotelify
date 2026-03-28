@@ -5,16 +5,28 @@ import { AttendanceQR } from "@/modules/staff/AttendanceQR";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RoleManager } from "@/modules/staff/RoleManager";
 import { useTenant } from "@/components/providers/TenantProvider";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 
 export default function StaffPage() {
-    const { tenant, isLoading } = useTenant();
+    const { tenant, hasPermission, isLoading } = useTenant();
 
     if (isLoading) {
         return (
             <div className="h-[60vh] flex flex-col items-center justify-center gap-4 text-indigo-300 font-black uppercase tracking-[0.2em] text-[10px]">
                 <Loader2 className="w-8 h-8 animate-spin" />
                 Validating Security Context...
+            </div>
+        );
+    }
+
+    if (!hasPermission('staff.manage')) {
+        return (
+            <div className="h-[60vh] flex flex-col items-center justify-center gap-4 text-rose-500 font-black uppercase tracking-[0.2em] text-center p-8">
+                <div className="w-16 h-16 rounded-3xl bg-rose-500/10 flex items-center justify-center mb-4">
+                    <Lock className="w-8 h-8" />
+                </div>
+                <h1 className="text-xl">Access Denied</h1>
+                <p className="text-[10px] text-zinc-500 max-w-xs">Your current role does not have authorization to manage the staff directory or roles.</p>
             </div>
         );
     }

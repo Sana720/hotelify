@@ -219,7 +219,7 @@ export default function PackagesPage() {
                                             value={formData.name || ""}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
                                             className="h-11 bg-white/[0.02] border-white/5 rounded-xl focus:bg-white/[0.04] transition-all"
-                                            placeholder="e.g. Enterprise Plus"
+                                            placeholder="Enter plan name"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -228,7 +228,7 @@ export default function PackagesPage() {
                                             value={formData.description || ""}
                                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                                             className="h-11 bg-white/[0.02] border-white/5 rounded-xl focus:bg-white/[0.04] transition-all"
-                                            placeholder="e.g. Best for large chains"
+                                            placeholder="Enter short description of the plan"
                                         />
                                     </div>
                                 </div>

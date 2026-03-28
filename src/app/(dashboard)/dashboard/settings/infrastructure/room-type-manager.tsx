@@ -1,7 +1,54 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Hotel, Bed, Trash2, Edit3, Loader2, CheckCircle2 } from "lucide-react";
+import { 
+    Plus, 
+    Hotel, 
+    Bed, 
+    Trash2, 
+    Edit3, 
+    Loader2, 
+    CheckCircle2,
+    Wifi, 
+    Wind, 
+    Tv, 
+    Coffee, 
+    ShieldCheck, 
+    Mountain, 
+    Waves, 
+    Utensils, 
+    Car,
+    Gamepad,
+    Sparkles,
+    Dumbbell,
+    Pizza,
+    Wine,
+    Flower2,
+    WashingMachine,
+    Shirt,
+    Refrigerator,
+    Bell,
+    Microwave,
+    Bath,
+    ShowerHead,
+    Baby,
+    Accessibility,
+    CigaretteOff,
+    PawPrint,
+    Lock,
+    Key,
+    Bike,
+    Bus,
+    Plane,
+    Monitor,
+    Music,
+    Thermometer,
+    Fan,
+    Laptop,
+    Briefcase,
+    Trees,
+    Zap
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -19,6 +66,53 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/components/providers/TenantProvider";
 import { createRoomType, deleteRoomType, updateRoomType } from "@/app/(admin)/admin/hotels/actions";
+import { AmenityManager } from "@/modules/pms/AmenityManager";
+
+const ICON_MAP: Record<string, React.ReactNode> = {
+    'Wifi': <Wifi className="w-full h-full" />,
+    'Wind': <Wind className="w-full h-full" />,
+    'Tv': <Tv className="w-full h-full" />,
+    'Coffee': <Coffee className="w-full h-full" />,
+    'ShieldCheck': <ShieldCheck className="w-full h-full" />,
+    'Mountain': <Mountain className="w-full h-full" />,
+    'Waves': <Waves className="w-full h-full" />,
+    'Utensils': <Utensils className="w-full h-full" />,
+    'Car': <Car className="w-full h-full" />,
+    'Gamepad': <Gamepad className="w-full h-full" />,
+    'Sparkles': <Sparkles className="w-full h-full" />,
+    'Dumbbell': <Dumbbell className="w-full h-full" />,
+    'Pizza': <Pizza className="w-full h-full" />,
+    'Wine': <Wine className="w-full h-full" />,
+    'Flower2': <Flower2 className="w-full h-full" />,
+    'WashingMachine': <WashingMachine className="w-full h-full" />,
+    'Shirt': <Shirt className="w-full h-full" />,
+    'Refrigerator': <Refrigerator className="w-full h-full" />,
+    'Bell': <Bell className="w-full h-full" />,
+    'Microwave': <Microwave className="w-full h-full" />,
+    'Bath': <Bath className="w-full h-full" />,
+    'ShowerHead': <ShowerHead className="w-full h-full" />,
+    'Baby': <Baby className="w-full h-full" />,
+    'Accessibility': <Accessibility className="w-full h-full" />,
+    'CigaretteOff': <CigaretteOff className="w-full h-full" />,
+    'PawPrint': <PawPrint className="w-full h-full" />,
+    'Lock': <Lock className="w-full h-full" />,
+    'Key': <Key className="w-full h-full" />,
+    'Bike': <Bike className="w-full h-full" />,
+    'Bus': <Bus className="w-full h-full" />,
+    'Plane': <Plane className="w-full h-full" />,
+    'Monitor': <Monitor className="w-full h-full" />,
+    'Music': <Music className="w-full h-full" />,
+    'Thermometer': <Thermometer className="w-full h-full" />,
+    'Fan': <Fan className="w-full h-full" />,
+    'Laptop': <Laptop className="w-full h-full" />,
+    'Briefcase': <Briefcase className="w-full h-full" />,
+    'Trees': <Trees className="w-full h-full" />,
+    'Zap': <Zap className="w-full h-full" />
+};
+
+function AmenityIcon({ name }: { name: string }) {
+    return ICON_MAP[name] || <Hotel className="w-full h-full" />;
+}
 
 export function RoomTypeManager() {
     const { tenant } = useTenant();
@@ -44,14 +138,18 @@ export function RoomTypeManager() {
         if (!tenant) return;
         setIsLoading(true);
 
-        const [rtRes, amRes, btRes] = await Promise.all([
+        const [rtRes, btRes, orgAmRes] = await Promise.all([
             supabase.from('room_types').select('*').eq('org_id', tenant.id),
-            supabase.from('amenities_master').select('*'),
-            supabase.from('bed_types').select('*')
+            supabase.from('bed_types').select('*'),
+            supabase.from('amenities').select('*').eq('org_id', tenant.id)
         ]);
 
         if (rtRes.data) setRoomTypes(rtRes.data);
-        if (amRes.data) setAmenities(amRes.data);
+        
+        // Show only organization-specific custom amenities as per multi-tenant logic
+        const customList = orgAmRes.data || [];
+        setAmenities(customList);
+        
         if (btRes.data) setBedTypes(btRes.data);
 
         setIsLoading(false);
@@ -222,7 +320,12 @@ export function RoomTypeManager() {
                             </div>
 
                             <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Room Amenities</Label>
+                                <div className="flex items-center justify-between ml-1">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Room Amenities</Label>
+                                    {amenities.length > 0 && (
+                                        <AmenityManager onSuccess={fetchData} />
+                                    )}
+                                </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     {amenities.map(am => (
                                         <div
@@ -234,11 +337,24 @@ export function RoomTypeManager() {
                                                 }`}
                                         >
                                             <div className="p-1.5 rounded-lg bg-zinc-900/50">
-                                                <Hotel className="w-3.5 h-3.5" />
+                                                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                                                    {am.icon ? (
+                                                        <AmenityIcon name={am.icon} />
+                                                    ) : (
+                                                        <Hotel className="w-full h-full" />
+                                                    )}
+                                                </div>
                                             </div>
                                             <span className="text-[10px] font-black uppercase tracking-wider truncate">{am.name}</span>
                                         </div>
                                     ))}
+                                    
+                                    {amenities.length === 0 && (
+                                        <div className="col-span-full">
+                                            <AmenityManager onSuccess={fetchData} />
+                                            <p className="text-[10px] text-zinc-600 mt-2 italic font-medium">No amenities defined yet. Click above to create your property's signature amenities.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

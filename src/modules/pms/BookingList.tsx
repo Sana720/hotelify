@@ -53,30 +53,24 @@ export function BookingList({ filterType }: { filterType?: string }) {
                 .eq('room_number', booking.room_number)
                 .eq('org_id', tenant.id);
 
-            // Re-fetch bookings
-            const { data } = await supabase
-                .from('bookings')
-                .select('*, rooms (room_number)')
-                .eq('org_id', tenant.id)
-                .order('check_in', { ascending: false });
-
-            if (data) {
-                setBookings(data.map((b: any) => ({
-                    ...b,
-                    room_number: b.rooms?.room_number || "N/A"
-                })));
-            }
+            await fetchBookings();
+        } else {
+            toast.error(`Check-in failed: ${bookingError.message}`);
         }
         setLoading(false);
     };
 
     const handleCheckOut = async (bookingId: string, booking: any) => {
         if (!tenant) return;
-        // Enforce Settlement: If folio exists and is not closed, or if there's a simple balance due
-        const isFolioOpen = booking.folios && booking.folios.length > 0 && booking.folios[0].status !== 'closed';
-        const due = (booking.total_price || 0) - (booking.advance_amount || 0);
+        // If they have a folio, let the folio status dictate if they are settled.
+        // If they don't have a folio, fallback to checking if advance covered total price.
+        const hasFolio = booking.folios && booking.folios.length > 0;
+        const isFolioOpen = hasFolio && booking.folios[0].status !== 'closed';
+        const simpleDue = (booking.total_price || 0) - (booking.advance_amount || 0);
 
-        if (isFolioOpen || due > 0) {
+        const isBlocked = hasFolio ? isFolioOpen : simpleDue > 0;
+
+        if (isBlocked) {
             toast.error("Unsettled Folio: Please clear the outstanding balance and close the statement before checkout.");
             setSelectedBooking({ id: booking.id, name: booking.guest_name });
             return;
@@ -95,64 +89,53 @@ export function BookingList({ filterType }: { filterType?: string }) {
                 .eq('room_number', booking.room_number)
                 .eq('org_id', tenant.id);
 
-            // Re-fetch bookings
-            const { data } = await supabase
-                .from('bookings')
-                .select('*, rooms (room_number)')
-                .eq('org_id', tenant.id)
-                .order('check_in', { ascending: false });
+            await fetchBookings();
+        } else {
+            toast.error(`Checkout failed: ${bookingError.message}`);
+        }
+        setLoading(false);
+    };
 
-            if (data) {
-                setBookings(data.map((b: any) => ({
-                    ...b,
-                    room_number: b.rooms?.room_number || "N/A"
-                })));
-            }
+    const fetchBookings = async () => {
+        if (!tenant) return;
+        setLoading(true);
+        const today = new Date().toISOString().split('T')[0];
+        
+        let query = supabase
+            .from('bookings')
+            .select('*, rooms (room_number), folios (status)')
+            .eq('org_id', tenant.id);
+
+        if (filterType === 'requests') {
+            query = query.in('status', ['confirmed', 'pending']).gte('check_in', today);
+        } else if (filterType === 'today') {
+            query = query.or(`check_in.eq.${today},check_out.eq.${today}`);
+        } else if (filterType === 'checkin') {
+            query = query.eq('check_in', today).eq('status', 'confirmed');
+        } else if (filterType === 'pending') {
+            query = query.lt('check_in', today).eq('status', 'confirmed');
+        } else if (filterType === 'checkout') {
+            query = query.eq('check_out', today).eq('status', 'checked_in');
+        } else if (filterType === 'delayed') {
+            query = query.lt('check_out', today).eq('status', 'checked_in');
+        } else if (filterType === 'upcoming-in') {
+            query = query.gt('check_in', today).eq('status', 'confirmed');
+        } else if (filterType === 'upcoming-out') {
+            query = query.gt('check_out', today).eq('status', 'checked_in');
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (data) {
+            setBookings(data.map((b: any) => ({
+                ...b,
+                room_number: b.rooms?.room_number || "N/A"
+            })));
         }
         setLoading(false);
     };
 
     useEffect(() => {
-        if (!tenant) return;
-
-        async function fetchBookings() {
-            setLoading(true);
-            const today = new Date().toISOString().split('T')[0];
-            
-            let query = supabase
-                .from('bookings')
-                .select('*, rooms (room_number), folios (status)')
-                .eq('org_id', tenant?.id);
-
-            if (filterType === 'requests') {
-                query = query.in('status', ['confirmed', 'pending']).gte('check_in', today);
-            } else if (filterType === 'today') {
-                query = query.or(`check_in.eq.${today},check_out.eq.${today}`);
-            } else if (filterType === 'checkin') {
-                query = query.eq('check_in', today).eq('status', 'confirmed');
-            } else if (filterType === 'pending') {
-                query = query.lt('check_in', today).eq('status', 'confirmed');
-            } else if (filterType === 'checkout') {
-                query = query.eq('check_out', today).eq('status', 'checked_in');
-            } else if (filterType === 'delayed') {
-                query = query.lt('check_out', today).eq('status', 'checked_in');
-            } else if (filterType === 'upcoming-in') {
-                query = query.gt('check_in', today).eq('status', 'confirmed');
-            } else if (filterType === 'upcoming-out') {
-                query = query.gt('check_out', today).eq('status', 'checked_in');
-            }
-
-            const { data, error } = await query.order('created_at', { ascending: false });
-
-            if (data) {
-                setBookings(data.map((b: any) => ({
-                    ...b,
-                    room_number: b.rooms?.room_number || "N/A"
-                })));
-            }
-            setLoading(false);
-        }
-
         fetchBookings();
     }, [tenant, filterType]);
 
@@ -183,8 +166,8 @@ export function BookingList({ filterType }: { filterType?: string }) {
                         guestName={selectedBooking.name}
                         onClose={() => {
                             setSelectedBooking(null);
-                            // Refresh bookings to reflect new folio status
-                            window.location.reload(); 
+                            // Soft refresh bookings to reflect new folio status without reloading the entire page
+                            fetchBookings(); 
                         }}
                     />
                 )}

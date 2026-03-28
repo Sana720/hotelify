@@ -31,7 +31,9 @@ export default function AdminHotelsPage() {
                 name: h.name,
                 domain: h.subdomain + ".hotelify.com",
                 tier: h.subscription_plans?.name || (h.subscription_tier ? h.subscription_tier.charAt(0).toUpperCase() + h.subscription_tier.slice(1) : "Starter"),
-                status: h.status || "Active",
+                status: h.subscription_status === 'trialing' ? 'Trial' : (h.status || "Active"),
+                subscription_status: h.subscription_status,
+                trial_ends_at: h.trial_ends_at,
                 joined: new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
             })));
         }

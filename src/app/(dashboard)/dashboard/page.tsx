@@ -1,8 +1,8 @@
 "use client";
 
-import { useTenant } from "@/components/providers/TenantProvider";
+import { useTenant, TenantContext } from "@/components/providers/TenantProvider";
 import { supabase } from "@/lib/supabase";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import {
     Clock,
@@ -23,7 +23,8 @@ import {
     ChevronRight,
     CalendarDays,
     Loader2,
-    CalendarPlus
+    CalendarPlus,
+    UserMinus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,12 +43,12 @@ import {
 } from "recharts";
 
 export default function DashboardPage() {
-    const { tenant, isLoading: isTenantLoading } = useTenant();
+    const { tenant, hasPermission, isLoading: isTenantLoading } = useTenant();
     const [stats, setStats] = useState({
         delayedCheckout: 0,
         pendingCheckIn: 0,
         upcomingCheckIn: 0,
-        upcomingCheckout: 0,
+        pendingCheckout: 0,
         todayBooked: 0,
         todayAvailable: 0,
         activeBooking: 0,
@@ -88,7 +89,7 @@ export default function DashboardPage() {
                 const delayedCheckout = b.filter(x => x.status === 'checked_in' && x.check_out < today).length;
                 const pendingCheckIn = b.filter(x => x.status === 'confirmed' && x.check_in === today).length;
                 const upcomingCheckIn = b.filter(x => x.status === 'confirmed' && x.check_in > today).length;
-                const upcomingCheckout = b.filter(x => x.status === 'checked_in' && x.check_out > today).length;
+                const pendingCheckout = b.filter(x => x.status === 'checked_in' && x.check_out === today).length;
                 const todayBooked = b.filter(x => (x.status === 'confirmed' || x.status === 'checked_in') && x.check_in <= today && x.check_out >= today).length;
                 const activeBooking = b.filter(x => x.status === 'checked_in').length;
                 const totalBookings = b.length;
@@ -96,7 +97,7 @@ export default function DashboardPage() {
                 const todayAvailable = Math.max(0, totalRooms - todayBooked);
 
                 setStats({
-                    delayedCheckout, pendingCheckIn, upcomingCheckIn, upcomingCheckout,
+                    delayedCheckout, pendingCheckIn, upcomingCheckIn, pendingCheckout,
                     todayBooked, todayAvailable, activeBooking, totalBookings
                 });
 
@@ -202,6 +203,7 @@ export default function DashboardPage() {
                         <span className="text-blue-500/60">Live Analytics</span>
                     </div>
                 </div>
+                {hasPermission('reservations.manage') && (
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <NewBookingDialog 
                         onSuccess={() => setRefreshKey(prev => prev + 1)}
@@ -222,10 +224,13 @@ export default function DashboardPage() {
                         }
                     />
                 </div>
+                )}
             </div>
 
             {/* Stat Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans">
+                {hasPermission('reservations.manage') && (
+                <>
                 <StatCard
                     icon={<History className="w-6 h-6" />}
                     label="Delayed Checkout"
@@ -254,14 +259,19 @@ export default function DashboardPage() {
                     url="/dashboard/bookings/upcoming-in"
                 />
                 <StatCard
-                    icon={<CalendarRange className="w-6 h-6" />}
-                    label="Upcoming Checkout"
-                    value={stats.upcomingCheckout.toString()}
-                    color="text-purple-500"
-                    bgColor="bg-purple-500/10"
-                    iconColor="text-purple-400"
-                    url="/dashboard/bookings/upcoming-out"
+                    icon={<UserMinus className="w-6 h-6" />}
+                    label="Pending Checkout"
+                    value={stats.pendingCheckout.toString()}
+                    color="text-orange-500"
+                    bgColor="bg-orange-500/10"
+                    iconColor="text-orange-400"
+                    url="/dashboard/bookings/checkout"
                 />
+                </>
+                )}
+
+                {hasPermission('inventory.manage') && (
+                <>
                 <StatCard
                     icon={<History className="w-6 h-6" />}
                     label="Today's Booked Rooms"
@@ -280,6 +290,11 @@ export default function DashboardPage() {
                     iconColor="text-blue-400"
                     url="/dashboard/rooms"
                 />
+                </>
+                )}
+
+                {hasPermission('reservations.manage') && (
+                <>
                 <StatCard
                     icon={<CheckSquare className="w-6 h-6" />}
                     label="Active Booking"
@@ -298,9 +313,12 @@ export default function DashboardPage() {
                     iconColor="text-zinc-400"
                     url="/dashboard/bookings"
                 />
+                </>
+                )}
             </div>
 
             {/* Reports Section */}
+            {hasPermission('dashboard.view') && (
             <div className="grid lg:grid-cols-2 gap-8 font-sans">
                 {/* Booking Report */}
                 <Card className="bg-white/[0.02] border-white/5 rounded-[2rem] overflow-hidden group hover:border-blue-500/20 transition-all duration-500">
@@ -426,6 +444,7 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
+            )}
         </div>
     );
 }
@@ -440,9 +459,10 @@ function StatCard({ icon, label, value, color, bgColor, iconColor, url }: {
     url: string
 }) {
     const router = useRouter();
+    const { hasPermission } = useContext(TenantContext);
     return (
         <Card 
-            onClick={() => router.push(url)}
+            onClick={() => hasPermission('dashboard.view') && router.push(url)}
             className="bg-white/[0.02] border-white/5 rounded-[2.5rem] hover:bg-white/[0.04] transition-all duration-500 group cursor-pointer relative overflow-hidden active:scale-95"
         >
             <div className={`absolute top-0 right-0 w-32 h-32 blur-[100px] -mr-12 -mt-12 opacity-0 group-hover:opacity-20 transition-opacity ${bgColor}`} />

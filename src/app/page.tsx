@@ -26,7 +26,7 @@ export default function LandingPage() {
         {/* Luxury 3D Background */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="/images/landing/hero-bg-abstract-v2.png"
+            src="/images/landing/hero-bg-abstract-v3.png"
             alt="HD Abstract Luxury Hotel Background"
             fill
             className="object-cover opacity-60"

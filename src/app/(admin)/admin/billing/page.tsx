@@ -25,14 +25,22 @@ export default function BillingLedgerPage() {
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [stats, setStats] = useState({
+        revenue: 0,
+        activeSubs: 0,
+        activeTrials: 0,
+        failedCount: 0
+    });
 
     useEffect(() => {
-        fetchBilling();
+        fetchBillingData();
     }, []);
 
-    async function fetchBilling() {
+    async function fetchBillingData() {
         setLoading(true);
-        const { data, error } = await supabase
+        
+        // 1. Fetch Transactions
+        const { data: txns } = await supabase
             .from('platform_billing')
             .select(`
                 *,
@@ -41,11 +49,28 @@ export default function BillingLedgerPage() {
             `)
             .order('created_at', { ascending: false });
 
-        if (!error) setRecords(data || []);
+        // 2. Fetch Org Stats
+        const { data: orgs } = await supabase
+            .from('organizations')
+            .select('subscription_status');
+
+        const paidRevenue = txns?.filter((r: any) => r.status === 'paid').reduce((a, b) => a + b.amount, 0) || 0;
+        const trials = orgs?.filter((o: any) => o.subscription_status === 'trialing').length || 0;
+        const subs = orgs?.filter((o: any) => o.subscription_status === 'active').length || 0;
+        const failed = txns?.filter((r: any) => r.status === 'failed').length || 0;
+
+        setStats({
+            revenue: paidRevenue,
+            activeSubs: subs,
+            activeTrials: trials,
+            failedCount: failed
+        });
+        
+        if (txns) setRecords(txns);
         setLoading(false);
     }
 
-    const filteredRecords = records.filter(r => 
+    const filteredRecords = records.filter((r: any) => 
         r.organizations?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -67,7 +92,7 @@ export default function BillingLedgerPage() {
                         <CreditCard className="w-8 h-8 text-emerald-500" />
                         Billing <span className="text-emerald-500">Ledger</span>
                     </h1>
-                    <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] mt-1">Platform Revenue & Transaction History</p>
+                    <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] mt-1">Platform Revenue & Trial Monitoring</p>
                 </div>
 
                 <div className="flex gap-3">
@@ -82,22 +107,22 @@ export default function BillingLedgerPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <BillingStatCard 
                     title="Gross Revenue" 
-                    value={`₹${records.filter(r => r.status === 'paid').reduce((a, b) => a + b.amount, 0).toLocaleString()}`} 
+                    value={`₹${stats.revenue.toLocaleString()}`} 
                     trend="+12.5%"
                 />
                 <BillingStatCard 
-                    title="Pending Payouts" 
-                    value={`₹${records.filter(r => r.status === 'pending').reduce((a, b) => a + b.amount, 0).toLocaleString()}`} 
-                    trend="5 Records"
+                    title="Active Trials" 
+                    value={stats.activeTrials.toString()} 
+                    trend="In Pipeline"
                 />
                 <BillingStatCard 
-                    title="Active Subs" 
-                    value={new Set(records.map(r => r.org_id)).size.toString()} 
+                    title="Paying Subs" 
+                    value={stats.activeSubs.toString()} 
                     trend="Properties"
                 />
                 <BillingStatCard 
                     title="Failed Trans" 
-                    value={records.filter(r => r.status === 'failed').length.toString()} 
+                    value={stats.failedCount.toString()} 
                     trend="Action Required"
                     isAlert
                 />

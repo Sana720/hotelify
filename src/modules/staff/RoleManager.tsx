@@ -18,6 +18,8 @@ const AVAILABLE_PERMISSIONS = [
     { id: "settings.edit", label: "Edit Property", description: "Modify hotel identity and operational policies." },
 ];
 
+import { toast } from "sonner";
+
 export function RoleManager() {
     const { tenant } = useTenant();
     const [roles, setRoles] = useState<any[]>([]);
@@ -30,10 +32,22 @@ export function RoleManager() {
     }, [tenant]);
 
     async function fetchRoles() {
+        if (!tenant) return;
         setLoading(true);
-        const { data } = await supabase.from("roles").select("*").eq("org_id", tenant!.id).order("name");
-        if (data) setRoles(data);
-        setLoading(false);
+        try {
+            const { data, error } = await supabase
+                .from("roles")
+                .select("*")
+                .eq("org_id", tenant.id)
+                .order("name");
+            
+            if (error) throw error;
+            if (data) setRoles(data);
+        } catch (err: any) {
+            toast.error(`Failed to fetch roles: ${err.message}`);
+        } finally {
+            setLoading(false);
+        }
     }
 
     const togglePermission = (permId: string) => {
@@ -48,22 +62,35 @@ export function RoleManager() {
     const handleCreateRole = async () => {
         if (!newRole.name || !tenant) return;
         setSubmitting(true);
-        const { error } = await supabase.from("roles").insert([{
-            org_id: tenant.id,
-            name: newRole.name,
-            permissions: newRole.permissions
-        }]);
+        try {
+            const { error } = await supabase.from("roles").insert([{
+                org_id: tenant.id,
+                name: newRole.name,
+                permissions: newRole.permissions
+            }]);
 
-        if (!error) {
+            if (error) throw error;
+
+            toast.success(`Role "${newRole.name}" created successfully.`);
             setNewRole({ name: "", permissions: [] });
             fetchRoles();
+        } catch (err: any) {
+            console.error("Role creation error:", err);
+            toast.error(`Failed to create role: ${err.message}`);
+        } finally {
+            setSubmitting(false);
         }
-        setSubmitting(false);
     };
 
     const handleDeleteRole = async (roleId: string) => {
-        const { error } = await supabase.from("roles").delete().eq("id", roleId);
-        if (!error) fetchRoles();
+        try {
+            const { error } = await supabase.from("roles").delete().eq("id", roleId);
+            if (error) throw error;
+            toast.success("Role deleted.");
+            fetchRoles();
+        } catch (err: any) {
+            toast.error(`Failed to delete role: ${err.message}`);
+        }
     };
 
     if (loading) {

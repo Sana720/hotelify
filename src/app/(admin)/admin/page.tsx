@@ -11,7 +11,7 @@ export default function AdminDashboardPage() {
         platformRevenue: "₹0",
         activeUsers: 0,
         systemLoad: "Normal",
-        mix: { Enterprise: 0, Professional: 0, Essential: 0 }
+        mix: { Enterprise: 0, Professional: 0, Essential: 0, Trial: 0 }
     });
     const [recentHotels, setRecentHotels] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -48,22 +48,25 @@ export default function AdminDashboardPage() {
             // 5. Fetch Subscription Mix
             const { data: allHotels } = await supabase
                 .from('organizations')
-                .select('subscription_plans(name)');
+                .select('subscription_status, subscription_plans(name)');
             
             const mix = {
                 Enterprise: 0,
                 Professional: 0,
-                Essential: 0
+                Essential: 0,
+                Trial: 0
             };
 
             allHotels?.forEach(h => {
+                if (h.subscription_status === 'trialing') {
+                    mix.Trial++;
+                    return;
+                }
                 const name = (h.subscription_plans as any)?.name;
                 if (name === 'Enterprise') mix.Enterprise++;
                 else if (name === 'Professional') mix.Professional++;
                 else if (name === 'Essential') mix.Essential++;
             });
-
-            const totalOrgs = allHotels?.length || 1;
 
             setStats({
                 totalHotels: hotelCount || 0,
@@ -76,8 +79,9 @@ export default function AdminDashboardPage() {
             setRecentHotels(hotels?.map(h => ({
                 name: h.name,
                 domain: h.subdomain + ".hotelify.app",
-                tier: (h.subscription_plans as any)?.name || 'Trial',
-                status: h.subscription_status === 'active' ? 'Active' : 'Trial'
+                tier: (h.subscription_plans as any)?.name || 'Custom',
+                status: h.subscription_status === 'trialing' ? 'Trialing' : 'Active',
+                trialEnds: h.trial_ends_at
             })) || []);
 
             setLoading(false);
@@ -169,6 +173,7 @@ export default function AdminDashboardPage() {
                             <SubscriptionMetric label="Enterprise" percentage={Math.round(((stats?.mix?.Enterprise || 0) / (stats.totalHotels || 1)) * 100)} color="bg-blue-500" />
                             <SubscriptionMetric label="Professional" percentage={Math.round(((stats?.mix?.Professional || 0) / (stats.totalHotels || 1)) * 100)} color="bg-purple-500" />
                             <SubscriptionMetric label="Essential" percentage={Math.round(((stats?.mix?.Essential || 0) / (stats.totalHotels || 1)) * 100)} color="bg-zinc-500" />
+                            <SubscriptionMetric label="Trials" percentage={Math.round(((stats?.mix?.Trial || 0) / (stats.totalHotels || 1)) * 100)} color="bg-emerald-500" />
                         </div>
                     </CardContent>
                 </Card>

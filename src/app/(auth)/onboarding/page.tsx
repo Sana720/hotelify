@@ -29,6 +29,7 @@ export default function OnboardingPage() {
         hotelName: "",
     });
     const [isLaunching, setIsLaunching] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const nextStep = () => {
@@ -48,78 +49,67 @@ export default function OnboardingPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No authenticated user found.");
 
-            // 1. Create Organization
-            const generatedSubdomain = config.hotelName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
-            const { data: org, error: orgError } = await supabase
-                .from('organizations')
-                .insert({
-                    name: config.hotelName,
-                    subdomain: generatedSubdomain,
-                    subscription_tier: 'essential'
-                })
-                .select()
-                .single();
-
-            if (orgError) throw orgError;
-
-            // 2. Create Staff Record for the owner
-            const { error: staffError } = await supabase
-                .from('staff')
-                .insert({
-                    org_id: org.id,
-                    user_id: user.id,
-                    email: user.email!,
-                    full_name: user.user_metadata?.full_name || 'Hotel Owner',
-                    is_active: true
-                });
-
-            if (staffError) throw staffError;
-
-            // 3. Initialize Property Identity
-            const { error: identityError } = await supabase
-                .from('property_identity')
-                .insert({
-                    org_id: org.id,
-                    name: config.hotelName,
-                });
-
-            if (identityError) throw identityError;
-
-            // 4. Initialize Operational Policies
-            const { error: policyError } = await supabase
-                .from('operational_policies')
-                .insert({
-                    org_id: org.id,
-                });
-
-            if (policyError) throw policyError;
-
-            // 5. Update Lead Status
-            await supabase
+            // 1. Submit/Update Lead for SuperAdmin Approval
+            const { error: leadError } = await supabase
                 .from('leads')
-                .update({ status: 'Converted' })
-                .eq('email', user.email!);
+                .upsert({
+                    email: user.email!,
+                    hotel_name: config.hotelName,
+                    property_type: config.propertyType,
+                    room_count: config.roomCount,
+                    status: 'Pending',
+                    notes: `Self-onboarding request: ${config.floors} floors, ${config.roomCount} rooms.`
+                }, { onConflict: 'email' });
 
-            // Determine redirect URL
-            const protocol = window.location.protocol;
-            const hostname = window.location.hostname;
-            const port = window.location.port;
-            
-            let redirectUrl = "";
-            if (hostname === 'localhost') {
-                redirectUrl = `${protocol}//${org.subdomain}.localhost${port ? `:${port}` : ''}/dashboard`;
-            } else {
-                // For production, we'd need a more complex logic depending on the domain structure
-                redirectUrl = `${protocol}//${org.subdomain}.${hostname}/dashboard`;
+            if (leadError) {
+                console.error("Supabase Error Full Details:", JSON.parse(JSON.stringify(leadError, Object.getOwnPropertyNames(leadError))));
+                const detailedError = `Error [${leadError.code}]: ${leadError.message}. ${leadError.hint || ''}. Details: ${leadError.details || 'None'}`;
+                throw new Error(detailedError);
             }
 
-            window.location.href = redirectUrl;
+            setIsSubmitted(true);
+            setIsLaunching(false);
         } catch (err: any) {
-            console.error("Setup Error:", err);
-            setError(err.message || "Failed to set up your hotel. Please try again.");
+            console.error("Setup Error Log:", err);
+            setError(err.message || "An unknown submission error occurred. Please check your SQL migrations.");
             setIsLaunching(false);
         }
     };
+
+    if (isSubmitted) {
+        return (
+            <div className="space-y-8 animate-in fade-in zoom-in duration-700">
+                <div className="glass-premium p-12 rounded-[3.5rem] border border-white/5 shadow-2xl text-center space-y-8 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500" />
+                    <div className="w-24 h-24 rounded-[2.5rem] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+                        <Check className="w-12 h-12 text-emerald-400" />
+                    </div>
+                    <div className="space-y-4">
+                        <h2 className="text-4xl font-black tracking-tighter text-white">Application Received</h2>
+                        <p className="text-zinc-400 font-medium max-w-sm mx-auto">
+                            Thank you for choosing Hotelify. Your property request for <strong className="text-white italic">"{config.hotelName}"</strong> has been sent to our Super Admin for verification.
+                        </p>
+                        <div className="pt-4 flex flex-col items-center gap-2">
+                            <Badge variant="outline" className="bg-emerald-500/5 border-emerald-500/10 text-emerald-400 font-black tracking-[0.2em] text-[10px] px-6 py-2 rounded-full">
+                                STATUS: UNDER VERIFICATION
+                            </Badge>
+                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-2">Expected activation: 12-24 Hours</p>
+                        </div>
+                    </div>
+                    
+                    <div className="pt-8 border-t border-white/5">
+                        <Button 
+                            variant="ghost" 
+                            className="text-zinc-500 font-black uppercase tracking-widest text-xs hover:text-white"
+                            onClick={() => window.location.href = '/'}
+                        >
+                            Return to Website
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-12">
@@ -228,8 +218,8 @@ export default function OnboardingPage() {
                                 <Check className="w-10 h-10 text-emerald-400" />
                             </div>
                             <div className="space-y-2">
-                                <h3 className="text-2xl font-black tracking-tight text-white">Optimization Ready</h3>
-                                <p className="text-zinc-500 font-medium">We've tailored the dashboard for a {config.propertyType} with {config.roomCount} rooms across {config.floors} floors.</p>
+                                <h3 className="text-2xl font-black tracking-tight text-white">Application Ready</h3>
+                                <p className="text-zinc-500 font-medium">Your configuration for <span className="text-white italic">"{config.hotelName}"</span> is complete. Once you submit, our Super Admin will verify and activate your dashboard.</p>
                             </div>
                         </motion.div>
                     )}
@@ -251,14 +241,14 @@ export default function OnboardingPage() {
                         onClick={step === 3 ? handleLaunch : nextStep}
                         disabled={isLaunching}
                     >
-                        {isLaunching ? "Optimizing..." : step === 3 ? "Launch Dashboard" : "Continue"}
+                        {isLaunching ? "Submitting..." : step === 3 ? "Submit for Verification" : "Continue"}
                         {!isLaunching && step !== 3 && <ChevronRight className="w-4 h-4 ml-2" />}
                     </Button>
                 </div>
             </div>
 
             <p className="text-center text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-                Configuration status: <span className="text-blue-500/60">Optimizing Performance Engine...</span>
+                System status: <span className="text-blue-500/60">Ready for verification sync...</span>
             </p>
         </div>
     );

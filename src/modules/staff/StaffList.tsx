@@ -8,12 +8,44 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTenant } from "@/components/providers/TenantProvider";
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, X, Shield, Key } from "lucide-react";
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogTrigger,
+    DialogDescription,
+    DialogFooter
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 export function StaffList() {
     const { tenant, isLoading: isTenantLoading } = useTenant();
     const [staff, setStaff] = useState<any[]>([]);
+    const [roles, setRoles] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const [formData, setFormData] = useState({
+        full_name: "",
+        email: "",
+        role_id: "",
+        pin_code: ""
+    });
+
+    const resetForm = () => {
+        setFormData({
+            full_name: "",
+            email: "",
+            role_id: "",
+            pin_code: ""
+        });
+    };
 
     useEffect(() => {
         async function fetchStaff() {
@@ -34,10 +66,64 @@ export function StaffList() {
             }
         }
 
+        async function fetchRoles() {
+            if (!tenant) return;
+            const { data } = await supabase
+                .from('roles')
+                .select('*')
+                .eq('org_id', tenant.id)
+                .order('name');
+            if (data) setRoles(data);
+        }
+
         if (!isTenantLoading) {
             fetchStaff();
+            fetchRoles();
         }
     }, [tenant, isTenantLoading]);
+
+    const handleAddStaff = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!tenant) return;
+
+        setIsSubmitting(true);
+        try {
+            // Use the Secure Auth Bridge instead of direct insertion
+            const response = await fetch('/api/staff/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: formData.full_name,
+                    email: formData.email,
+                    role_id: formData.role_id,
+                    pin_code: formData.pin_code,
+                    org_id: tenant.id
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Failed to create staff account");
+            }
+
+            toast.success("Team member onboarded and account created.");
+            setIsDialogOpen(false);
+            resetForm();
+            
+            // Refresh Staff List
+            const { data } = await supabase
+                .from('staff')
+                .select('*, roles(name)')
+                .eq('org_id', tenant.id);
+            if (data) setStaff(data);
+            
+        } catch (err: any) {
+            toast.error(`Onboarding Error: ${err.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     if (isTenantLoading || isLoading) {
         return (
@@ -55,10 +141,98 @@ export function StaffList() {
                     <CardTitle className="text-2xl text-gradient-premium">Staff Directory</CardTitle>
                     <p className="text-sm text-white/40 mt-1.5">Manage your team and their roles at {tenant?.name}.</p>
                 </div>
-                <Button className="rounded-full gap-2 bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all duration-300 hover:scale-105 border border-indigo-500/50">
-                    <UserPlus className="w-4 h-4" />
-                    Add Staff
-                </Button>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="rounded-full gap-2 bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all duration-300 hover:scale-105 border border-indigo-500/50 h-11 px-6 font-black uppercase tracking-widest text-[10px]">
+                            <UserPlus className="w-4 h-4" />
+                            Add Staff
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="glass-premium border-white/10 bg-[#0a0a0c]/95 backdrop-blur-3xl text-white rounded-[2.5rem] p-8 max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-black tracking-tight uppercase italic flex items-center gap-2">
+                                <Plus className="w-6 h-6 text-indigo-400" />
+                                Team <span className="text-indigo-400">Onboarding</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-white/40 font-medium">Register a new team member and assign their system permissions.</DialogDescription>
+                        </DialogHeader>
+                        
+                        <form onSubmit={handleAddStaff} className="space-y-6 mt-6">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Full Identity Name</Label>
+                                    <Input
+                                        placeholder="e.g. John Doe"
+                                        className="h-12 bg-white/[0.03] border-white/10 rounded-2xl focus:ring-indigo-500/20 font-bold"
+                                        value={formData.full_name}
+                                        onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Communication Email</Label>
+                                    <Input
+                                        type="email"
+                                        placeholder="john@property.com"
+                                        className="h-12 bg-white/[0.03] border-white/10 rounded-2xl focus:ring-indigo-500/20 font-bold"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Assigned Role</Label>
+                                        <Select 
+                                            value={formData.role_id} 
+                                            onValueChange={(v) => setFormData({...formData, role_id: v})}
+                                            required
+                                        >
+                                            <SelectTrigger className="h-12 bg-white/[0.03] border-white/10 rounded-2xl font-bold">
+                                                <SelectValue placeholder="Select Role" />
+                                            </SelectTrigger>
+                                            <SelectContent className="glass-premium border-white/10">
+                                                {roles.map(role => (
+                                                    <SelectItem key={role.id} value={role.id} className="font-bold">{role.name}</SelectItem>
+                                                ))}
+                                                {roles.length === 0 && (
+                                                    <div className="p-4 text-center text-white/20 text-xs italic">No roles defined. Click the Roles tab to create one.</div>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1 flex items-center gap-2">
+                                            <Key className="w-3 h-3" />
+                                            Access PIN
+                                        </Label>
+                                        <Input
+                                            type="text"
+                                            maxLength={4}
+                                            placeholder="1234"
+                                            className="h-12 bg-white/[0.03] border-white/10 rounded-2xl focus:ring-indigo-500/20 font-bold text-center tracking-[0.5em]"
+                                            value={formData.pin_code}
+                                            onChange={(e) => setFormData({...formData, pin_code: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <DialogFooter className="pt-4">
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting || !formData.role_id}
+                                    className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] gap-2 shadow-xl shadow-indigo-900/40 transition-all"
+                                >
+                                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                                    Finalize Onboarding
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </CardHeader>
             <CardContent className="p-0">
                 <BaseTable>

@@ -57,7 +57,10 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
         check_out: new Date(Date.now() + 86400000).toISOString().split('T')[0],
         num_adults: 1,
         num_children: 0,
+        room_type_id: "any",
     });
+
+    const [roomTypes, setRoomTypes] = useState<any[]>([]);
 
     const [formData, setFormData] = useState({
         guest_name: "",
@@ -84,11 +87,18 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
     useEffect(() => {
         if (tenant && isOpen) {
             fetchTaxSettings();
+            fetchRoomTypes();
             if (defaultRoomId) {
                 setFormData(prev => ({ ...prev, room_id: defaultRoomId }));
             }
         }
     }, [tenant, isOpen, defaultRoomId]);
+
+    const fetchRoomTypes = async () => {
+        if (!tenant) return;
+        const { data } = await supabase.from('room_types').select('id, name, base_price').eq('org_id', tenant.id);
+        if (data) setRoomTypes(data);
+    };
 
     // Reset state when modal is closed
     useEffect(() => {
@@ -101,6 +111,7 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                 check_out: new Date(Date.now() + 86400000).toISOString().split('T')[0],
                 num_adults: 1,
                 num_children: 0,
+                room_type_id: "any",
             });
             setFormData({
                 guest_name: "",
@@ -205,7 +216,8 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
             const filtered = (allRooms || []).filter(room => {
                 const isBooked = bookedRoomIds.includes(room.id);
                 const hasCapacity = (room.room_types?.max_occupancy || 2) >= totalGuests;
-                return !isBooked && hasCapacity;
+                const matchesType = searchData.room_type_id === 'any' || room.room_type_id === searchData.room_type_id;
+                return !isBooked && hasCapacity && matchesType;
             }).map(room => ({
                 ...room,
                 base_price: room.room_types?.base_price ?? room.base_price
@@ -425,6 +437,25 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Room Category</Label>
+                                <Select value={searchData.room_type_id} onValueChange={(v) => setSearchData({ ...searchData, room_type_id: v })}>
+                                    <SelectTrigger className="h-12 bg-white/[0.03] border-white/10 rounded-xl font-bold text-sm">
+                                        <SelectValue placeholder="Any Category" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#111114] border-white/10 text-white rounded-xl">
+                                        <SelectItem value="any" className="font-bold text-sm cursor-pointer hover:bg-white/5 focus:bg-white/5">Any Category</SelectItem>
+                                        {roomTypes.map(rt => (
+                                            <SelectItem key={rt.id} value={rt.id} className="font-bold text-sm cursor-pointer hover:bg-white/5 focus:bg-white/5">
+                                                {rt.name} {rt.base_price ? `— ₹${rt.base_price.toLocaleString()}` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
                         <Button 
                             onClick={handleSearchRooms}
                             disabled={isLoading}
@@ -622,7 +653,7 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                                     {formData.companions.map((companion, idx) => (
                                         <div key={idx} className="flex gap-2 bg-white/[0.02] border border-white/5 p-2 rounded-xl">
                                             <Input
-                                                placeholder={`Companion ${idx + 1} Name`}
+                                                placeholder={`Companion ${idx + 1} Name (Opt)`}
                                                 value={companion.name}
                                                 onChange={e => {
                                                     const newComps = [...formData.companions];
@@ -630,7 +661,6 @@ export function NewBookingDialog({ trigger, onSuccess, open: externalOpen, onOpe
                                                     setFormData({ ...formData, companions: newComps });
                                                 }}
                                                 className="h-9 bg-transparent border-white/10 text-xs flex-1"
-                                                required
                                             />
                                             <Input
                                                 placeholder="ID (Opt)"

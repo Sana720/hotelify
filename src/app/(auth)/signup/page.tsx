@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { registerUserAndLead } from "./actions";
 
 export default function SignupPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -19,34 +20,27 @@ export default function SignupPage() {
         setIsLoading(true);
         setError(null);
 
-        const formData = new FormData(e.target as HTMLFormElement);
-        const email = formData.get('email') as string;
-        const phone = formData.get('phone') as string;
-        const password = formData.get('password') as string;
-        const hotelName = formData.get('hotel-name') as string;
-        const { data, error: authError } = await supabase.auth.signUp({
+        const formDataArr = new FormData(e.target as HTMLFormElement);
+        const email = formDataArr.get('email') as string;
+        const phone = formDataArr.get('phone') as string;
+        const password = formDataArr.get('password') as string;
+        const hotelName = formDataArr.get('hotel-name') as string;
+
+        const result = await registerUserAndLead({
             email,
+            phone,
             password,
-            options: {
-                data: {
-                    full_name: hotelName,
-                }
-            }
+            hotelName
         });
 
-        if (authError) {
-            setError(authError.message);
+        if (!result.success) {
+            setError(result.error || "Registration failed. Please try again.");
             setIsLoading(false);
             return;
         }
 
-        // Create a lead record for the Superadmin Dashboard
-        await supabase.from('leads').insert({
-            email,
-            phone,
-            hotel_name: hotelName,
-            status: 'Pending'
-        });
+        // Auto sign in for testing
+        await supabase.auth.signInWithPassword({ email, password });
 
         window.location.href = '/onboarding';
     };

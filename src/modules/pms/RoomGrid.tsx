@@ -12,11 +12,9 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { 
-    Sparkles, 
     Hammer, 
     CheckCircle2, 
     Moon, 
-    WashingMachine, 
     Loader2, 
     ChevronRight, 
     Info, 
@@ -24,16 +22,46 @@ import {
     Layers,
     IndianRupee,
     ArrowRight,
-    Wifi,
-    Wind,
-    Tv,
-    Coffee,
-    ShieldCheck,
-    Mountain,
-    Waves,
-    Utensils,
+    Wifi, 
+    Wind, 
+    Tv, 
+    Coffee, 
+    ShieldCheck, 
+    Mountain, 
+    Waves, 
+    Utensils, 
     Car,
-    Gamepad
+    Gamepad,
+    Sparkles, 
+    Dumbbell, 
+    Pizza, 
+    Wine, 
+    Flower2, 
+    WashingMachine, 
+    Shirt, 
+    Refrigerator, 
+    Bell, 
+    Microwave, 
+    Bath, 
+    ShowerHead, 
+    Baby, 
+    Accessibility, 
+    CigaretteOff, 
+    PawPrint, 
+    Lock, 
+    Key, 
+    Bike, 
+    Bus, 
+    Plane, 
+    Monitor, 
+    Music, 
+    Thermometer, 
+    Fan, 
+    Laptop, 
+    Briefcase, 
+    Trees,
+    Hotel as HotelIcon,
+    Trash2
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getHousekeepingHistory, updateRoomStatus, logHousekeepingAction } from "@/app/(admin)/admin/hotels/actions";
@@ -95,7 +123,7 @@ export function RoomGrid() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('rooms')
-                .select('*, room_types(base_price)')
+                .select('*, room_types(base_price, name, amenities)')
                 .eq('org_id', tenant?.id)
                 .order('room_number', { ascending: true });
 
@@ -116,7 +144,9 @@ export function RoomGrid() {
                 .from('amenities')
                 .select('*')
                 .eq('org_id', tenant.id);
-            if (data) setAmenitiesList(data || []);
+            
+            // Show only organization-specific custom amenities as per multi-tenant logic
+            setAmenitiesList(data || []);
         }
 
         fetchRooms();
@@ -124,8 +154,13 @@ export function RoomGrid() {
     }, [tenant, tenantLoading]);
 
     const getIcon = (iconName: string) => {
-        const icons: any = { Wifi, Wind, Tv, Coffee, ShieldCheck, Mountain, Waves, Utensils, Car, Gamepad };
-        const Icon = icons[iconName] || Wifi;
+        const icons: any = { 
+            Wifi, Wind, Tv, Coffee, ShieldCheck, Mountain, Waves, Utensils, Car, Gamepad,
+            Sparkles, Dumbbell, Pizza, Wine, Flower2, WashingMachine, Shirt, Refrigerator,
+            Bell, Microwave, Bath, ShowerHead, Baby, Accessibility, CigaretteOff, PawPrint,
+            Lock, Key, Bike, Bus, Plane, Monitor, Music, Thermometer, Fan, Laptop, Briefcase, Trees
+        };
+        const Icon = icons[iconName] || HotelIcon;
         return <Icon className="w-3.5 h-3.5" />;
     };
     useEffect(() => {
@@ -226,46 +261,52 @@ export function RoomGrid() {
 
     const handleCompleteMaintenance = async () => {
         if (!tenant || !selectedRoom) return;
-        
         setLogsLoading(true);
-        const res = await updateRoomStatus(tenant.id, selectedRoom.id, 'available');
-        if (res.success) {
-            await logHousekeepingAction(tenant.id, {
+
+        const { error } = await supabase
+            .from('rooms')
+            .update({ status: 'available' })
+            .eq('id', selectedRoom.id);
+
+        if (!error) {
+            await supabase.from('room_logs').insert([{
                 room_id: selectedRoom.id,
-                old_status: selectedRoom.status,
+                org_id: tenant.id,
+                old_status: 'maintenance',
                 new_status: 'available',
-                action_type: 'maintenance_completed'
-            });
-            toast.success(`Maintenance completed for Room ${selectedRoom.room_number}.`);
+                action_type: 'maintenance_completion'
+            }]);
             
-            // Refresh local state
             setRooms(prev => prev.map(r => r.id === selectedRoom.id ? { ...r, status: 'available' } : r));
             setSelectedRoom(prev => prev ? { ...prev, status: 'available' } : null);
-            
-            // Re-fetch logs
-            const logRes = await getHousekeepingHistory(tenant.id, selectedRoom.id);
-            if (logRes.success) setRoomLogs(logRes.logs || []);
+            toast.success("Maintenance completed.");
         }
         setLogsLoading(false);
     };
 
-    const handleToggleAmenity = async (amenityId: string) => {
+    const handleDeleteRoom = async () => {
         if (!tenant || !selectedRoom) return;
         
-        const currentAmenities = selectedRoom.amenities || [];
-        const newAmenities = currentAmenities.includes(amenityId)
-            ? currentAmenities.filter(a => a !== amenityId)
-            : [...currentAmenities, amenityId];
-            
-        const { error } = await supabase
-            .from('rooms')
-            .update({ amenities: newAmenities })
-            .eq('id', selectedRoom.id);
-            
-        if (!error) {
-            setRooms(prev => prev.map(r => r.id === selectedRoom.id ? { ...r, amenities: newAmenities } : r));
-            setSelectedRoom(prev => prev ? { ...prev, amenities: newAmenities } : null);
-            toast.success(`Amenities updated.`);
+        const confirmed = window.confirm(`DANGER: Are you sure you want to permanently delete Room ${selectedRoom.room_number}? This action cannot be undone.`);
+        if (!confirmed) return;
+
+        setLogsLoading(true);
+        try {
+            const { error } = await supabase
+                .from('rooms')
+                .delete()
+                .eq('id', selectedRoom.id)
+                .eq('org_id', tenant.id);
+
+            if (error) throw error;
+
+            toast.success(`Asset Deleted: Room ${selectedRoom.room_number} removed from inventory.`);
+            setRooms(prev => prev.filter(r => r.id !== selectedRoom.id));
+            setSelectedRoom(null);
+        } catch (err: any) {
+            toast.error(`Deletion failed: ${err.message}`);
+        } finally {
+            setLogsLoading(false);
         }
     };
 
@@ -357,10 +398,22 @@ export function RoomGrid() {
                                         <DialogTitle className="text-4xl font-black tracking-tighter uppercase italic">Room <span className="text-blue-500">{selectedRoom.room_number}</span></DialogTitle>
                                         <DialogDescription className="text-zinc-500 font-bold uppercase tracking-[0.2em] text-[10px]">Asset Profile & Operational Status</DialogDescription>
                                     </div>
-                                    <Badge variant="outline" className={`gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest ${statusConfig[selectedRoom.status as keyof typeof statusConfig]?.color || ""}`}>
-                                        {statusConfig[selectedRoom.status as keyof typeof statusConfig]?.icon}
-                                        {statusConfig[selectedRoom.status as keyof typeof statusConfig]?.label || selectedRoom.status}
-                                    </Badge>
+                                    <div className="flex items-center gap-3">
+                                        <Badge variant="outline" className={`gap-2 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest ${statusConfig[selectedRoom.status as keyof typeof statusConfig]?.color || ""}`}>
+                                            {statusConfig[selectedRoom.status as keyof typeof statusConfig]?.icon}
+                                            {statusConfig[selectedRoom.status as keyof typeof statusConfig]?.label || selectedRoom.status}
+                                        </Badge>
+                                        <Button 
+                                            onClick={handleDeleteRoom}
+                                            disabled={logsLoading || selectedRoom.status === 'occupied'}
+                                            variant="ghost" 
+                                            size="icon"
+                                            className="h-10 w-10 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white rounded-xl transition-all border border-red-500/20"
+                                            title="Delete Asset"
+                                        >
+                                            {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
@@ -437,21 +490,20 @@ export function RoomGrid() {
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                         {amenitiesList.map(amenity => {
-                                            const isActive = selectedRoom.amenities?.includes(amenity.id);
+                                            // Check against the room category's amenities instead of individual room
+                                            const isActive = (selectedRoom as any).room_types?.amenities?.includes(amenity.id);
                                             return (
-                                                <button
+                                                <div
                                                     key={amenity.id}
-                                                    type="button"
-                                                    onClick={() => handleToggleAmenity(amenity.id)}
                                                     className={`flex items-center gap-2 p-3 md:p-3.5 rounded-xl md:rounded-2xl border transition-all ${
                                                         isActive
                                                             ? 'bg-blue-600/10 border-blue-500/50 text-blue-400 font-bold'
-                                                            : 'bg-white/[0.02] border-white/5 text-zinc-600 hover:bg-white/[0.04]'
+                                                            : 'bg-white/[0.02] border-white/5 text-zinc-600/50 opacity-50 grayscale'
                                                     }`}
                                                 >
                                                     {getIcon(amenity.icon)}
                                                     <span className="text-[9px] uppercase tracking-widest leading-none">{amenity.name}</span>
-                                                </button>
+                                                </div>
                                             );
                                         })}
                                         {amenitiesList.length === 0 && (

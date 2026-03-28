@@ -55,48 +55,58 @@ import { useTenant } from "@/components/providers/TenantProvider"
 import { supabase } from "@/lib/supabase"
 
 const operations = [
-    { title: "Operations Overview", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Guest Registry", url: "/dashboard/guests", icon: UserCheck },
+    { title: "Operations Overview", url: "/dashboard", icon: LayoutDashboard, permission: "dashboard.view" },
 ]
 
+const guestRegistry = { title: "Guest Registry", url: "/dashboard/guests", icon: UserCheck, permission: "guests.view" };
+
 const frontDesk = [
-    { title: "Today's Check-In", url: "/dashboard/bookings/checkin", icon: UserPlus },
-    { title: "Today's Check-Out", url: "/dashboard/bookings/checkout", icon: DoorClosed },
-    { title: "Pending Check-Ins", url: "/dashboard/bookings/pending", icon: Clock },
-    { title: "Delayed Check-Outs", url: "/dashboard/bookings/delayed", icon: Clock },
+    { title: "Today's Check-In", url: "/dashboard/bookings/checkin", icon: UserPlus, permission: "reservations.manage" },
+    { title: "Today's Check-Out", url: "/dashboard/bookings/checkout", icon: DoorClosed, permission: "reservations.manage" },
+    { title: "Pending Check-Ins", url: "/dashboard/bookings/pending", icon: Clock, permission: "reservations.manage" },
+    { title: "Delayed Check-Outs", url: "/dashboard/bookings/delayed", icon: Clock, permission: "reservations.manage" },
 ]
 
 const reservations = [
-    { title: "Booking Overview", url: "/dashboard/bookings", icon: CalendarPlus },
-    { title: "Booking Requests", url: "/dashboard/bookings/requests", icon: BellRing },
-    { title: "Today's Booked", url: "/dashboard/bookings/today", icon: CalendarCheck },
-    { title: "Upcoming Arrivals", url: "/dashboard/bookings/upcoming-in", icon: CalendarRange },
-    { title: "Upcoming Departures", url: "/dashboard/bookings/upcoming-out", icon: CalendarFold },
+    { title: "Booking Overview", url: "/dashboard/bookings", icon: CalendarPlus, permission: "reservations.manage" },
+    { title: "Booking Requests", url: "/dashboard/bookings/requests", icon: BellRing, permission: "reservations.manage" },
+    { title: "Today's Booked", url: "/dashboard/bookings/today", icon: CalendarCheck, permission: "reservations.manage" },
+    { title: "Upcoming Arrivals", url: "/dashboard/bookings/upcoming-in", icon: CalendarRange, permission: "reservations.manage" },
+    { title: "Upcoming Departures", url: "/dashboard/bookings/upcoming-out", icon: CalendarFold, permission: "reservations.manage" },
 ]
 
 const housekeepingItems = [
-    { title: "Room Cleaning", url: "/dashboard/cleaning", icon: Sparkles },
-    { title: "Laundry Service", url: "/dashboard/laundry", icon: WashingMachine },
+    { title: "Room Cleaning", url: "/dashboard/cleaning", icon: Sparkles, permission: "cleaning.manage" },
+    { title: "Laundry Service", url: "/dashboard/laundry", icon: WashingMachine, permission: "laundry.log" },
 ]
 
 const inventory = [
-    { title: "Room Inventory", url: "/dashboard/rooms", icon: DoorOpen },
-    { title: "Room Types", url: "/dashboard/room-types", icon: Bed },
-    { title: "Amenities", url: "/dashboard/amenities", icon: Sparkles },
+    { title: "Amenities", url: "/dashboard/amenities", icon: Sparkles, permission: "inventory.manage" },
+    { title: "Room Types", url: "/dashboard/room-types", icon: Bed, permission: "inventory.manage" },
+    { title: "Room Inventory", url: "/dashboard/rooms", icon: DoorOpen, permission: "inventory.manage" },
 ]
 
 const adminFinance = [
-    { title: "Billing & Invoices", url: "/dashboard/billing", icon: CreditCard },
-    { title: "Staff Directory", url: "/dashboard/staff", icon: Users },
-    { title: "Staff Attendance", url: "/dashboard/attendance", icon: ClipboardList },
-    { title: "Property Settings", url: "/dashboard/settings", icon: Settings },
+    { title: "Billing & Invoices", url: "/dashboard/billing", icon: CreditCard, permission: "settings.edit" },
+    { title: "Staff Directory", url: "/dashboard/staff", icon: Users, permission: "staff.manage" },
+    { title: "Staff Attendance", url: "/dashboard/attendance", icon: ClipboardList, permission: "staff.manage" },
+    { title: "Property Settings", url: "/dashboard/settings", icon: Settings, permission: "settings.edit" },
 ]
 
 export function AppSidebar() {
-    const { tenant } = useTenant();
+    const { tenant, hasPermission } = useTenant();
     const router = useRouter();
     const pathname = usePathname();
     const [mounted, setMounted] = useState(false);
+
+    // Permission Groups Checks
+    const canSeeOperations = operations.some(item => hasPermission(item.permission));
+    const canSeeInventory = inventory.some(item => hasPermission(item.permission));
+    const canSeeGuests = hasPermission(guestRegistry.permission);
+    const canSeeFrontDesk = frontDesk.some(item => hasPermission(item.permission));
+    const canSeeReservations = reservations.some(item => hasPermission(item.permission));
+    const canSeeHousekeeping = housekeepingItems.some(item => hasPermission(item.permission));
+    const canSeeAdmin = adminFinance.some(item => hasPermission(item.permission));
 
     useEffect(() => {
         setMounted(true);
@@ -131,11 +141,12 @@ export function AppSidebar() {
             </SidebarHeader>
             <SidebarContent className="px-4">
                 {/* --- OPERATIONS & DASHBOARD --- */}
+                {canSeeOperations && (
                 <SidebarGroup>
                     <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Operations</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {operations.map((item) => (
+                            {operations.filter(i => hasPermission(i.permission)).map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url} className="h-11 hover:bg-white/5 transition-all group data-[active=true]:bg-blue-600/10 data-[active=true]:text-blue-400">
                                         <Link href={item.url} className="flex items-center gap-3">
@@ -145,11 +156,54 @@ export function AppSidebar() {
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                             ))}
+                            
+                            {canSeeInventory && (
+                            <SidebarMenuItem>
+                                <Collapsible className="group/collapsible">
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuButton className="h-11 hover:bg-white/5 transition-all group w-full justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Hotel className="w-5 h-5 group-hover:text-white transition-colors" />
+                                                <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">Assets & Rooms</span>
+                                            </div>
+                                            <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-white transition-all duration-300 group-data-[state=open]/collapsible:rotate-180" />
+                                        </SidebarMenuButton>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <SidebarMenuSub className="border-l border-white/5 ml-4">
+                                            {inventory.filter(i => hasPermission(i.permission)).map((item) => (
+                                                <SidebarMenuSubItem key={item.title}>
+                                                    <SidebarMenuSubButton asChild isActive={pathname === item.url} className="hover:bg-white/5 group h-9">
+                                                        <Link href={item.url} className="flex items-center gap-3">
+                                                            <item.icon className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                                                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase tracking-widest">{item.title}</span>
+                                                        </Link>
+                                                    </SidebarMenuSubButton>
+                                                </SidebarMenuSubItem>
+                                            ))}
+                                        </SidebarMenuSub>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                            </SidebarMenuItem>
+                            )}
+
+                            {canSeeGuests && (
+                            <SidebarMenuItem key={guestRegistry.title}>
+                                <SidebarMenuButton asChild tooltip={guestRegistry.title} isActive={pathname === guestRegistry.url} className="h-11 hover:bg-white/5 transition-all group data-[active=true]:bg-blue-600/10 data-[active=true]:text-blue-400">
+                                    <Link href={guestRegistry.url} className="flex items-center gap-3">
+                                        <guestRegistry.icon className="w-5 h-5 text-slate-500 group-hover:text-blue-400 group-data-[active=true]:text-blue-400 transition-colors" />
+                                        <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">{guestRegistry.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            )}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+                )}
 
                 {/* --- FRONT DESK (High Level) --- */}
+                {canSeeFrontDesk && (
                 <SidebarGroup className="mt-4">
                     <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Front Desk</SidebarGroupLabel>
                     <SidebarGroupContent>
@@ -167,7 +221,7 @@ export function AppSidebar() {
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub className="border-l border-white/5 ml-4">
-                                            {frontDesk.map((item) => (
+                                            {frontDesk.filter(i => hasPermission(i.permission)).map((item) => (
                                                 <SidebarMenuSubItem key={item.title}>
                                                     <SidebarMenuSubButton asChild isActive={pathname === item.url} className="hover:bg-white/5 group h-9">
                                                         <Link href={item.url} className="flex items-center gap-3">
@@ -184,13 +238,15 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+                )}
 
                 {/* --- RESERVATIONS --- */}
+                {canSeeReservations && (
                 <SidebarGroup className="mt-4">
                     <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Reservations</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {reservations.map((item) => (
+                            {reservations.filter(i => hasPermission(i.permission)).map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url} className="h-10 hover:bg-white/5 transition-all group data-[active=true]:text-emerald-400">
                                         <Link href={item.url} className="flex items-center gap-3">
@@ -203,13 +259,15 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+                )}
 
                 {/* --- HOUSEKEEPING & SERVICES --- */}
+                {canSeeHousekeeping && (
                 <SidebarGroup className="mt-4">
                     <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Housekeeping & Services</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {housekeepingItems.map((item) => (
+                            {housekeepingItems.filter(i => hasPermission(i.permission)).map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url} className="h-10 hover:bg-white/5 transition-all group">
                                         <Link href={item.url} className="flex items-center gap-3">
@@ -222,44 +280,10 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
-
-                {/* --- INVENTORY --- */}
-                <SidebarGroup className="mt-4">
-                    <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Inventory Management</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <Collapsible className="group/collapsible">
-                                    <CollapsibleTrigger asChild>
-                                        <SidebarMenuButton className="h-11 hover:bg-white/5 transition-all group w-full justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <Hotel className="w-5 h-5 group-hover:text-white transition-colors" />
-                                                <span className="font-bold uppercase tracking-widest text-[10px] group-hover:text-white transition-colors">Assets & Rooms</span>
-                                            </div>
-                                            <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-white transition-all duration-300 group-data-[state=open]/collapsible:rotate-180" />
-                                        </SidebarMenuButton>
-                                    </CollapsibleTrigger>
-                                    <CollapsibleContent>
-                                        <SidebarMenuSub className="border-l border-white/5 ml-4">
-                                            {inventory.map((item) => (
-                                                <SidebarMenuSubItem key={item.title}>
-                                                    <SidebarMenuSubButton asChild isActive={pathname === item.url} className="hover:bg-white/5 group h-9">
-                                                        <Link href={item.url} className="flex items-center gap-3">
-                                                            <item.icon className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
-                                                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase tracking-widest">{item.title}</span>
-                                                        </Link>
-                                                    </SidebarMenuSubButton>
-                                                </SidebarMenuSubItem>
-                                            ))}
-                                        </SidebarMenuSub>
-                                    </CollapsibleContent>
-                                </Collapsible>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                )}
 
                 {/* --- ADMIN & FINANCE --- */}
+                {canSeeAdmin && (
                 <SidebarGroup className="mt-4 mb-8">
                     <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-4 mb-2 italic">Administration</SidebarGroupLabel>
                     <SidebarGroupContent>
@@ -277,7 +301,7 @@ export function AppSidebar() {
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub className="border-l border-white/5 ml-4">
-                                            {adminFinance.map((item) => (
+                                            {adminFinance.filter(i => hasPermission(i.permission)).map((item) => (
                                                 <SidebarMenuSubItem key={item.title}>
                                                     <SidebarMenuSubButton asChild isActive={pathname === item.url} className="hover:bg-white/5 group h-9">
                                                         <Link href={item.url} className="flex items-center gap-3">
@@ -294,6 +318,7 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+                )}
             </SidebarContent>
             <SidebarFooter className="p-4 border-t border-white/5">
                 <SidebarMenu>

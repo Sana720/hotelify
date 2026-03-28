@@ -12,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { History, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 export function CleaningDashboard() {
-    const { tenant } = useTenant();
+    const { tenant, hasPermission } = useTenant();
     const [rooms, setRooms] = useState<any[]>([]);
     const [staff, setStaff] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -43,6 +44,11 @@ export function CleaningDashboard() {
 
     const handleMarkClean = async (roomId: string, currentStatus: string, assignedStaffId: string | null) => {
         if (!tenant) return;
+        if (!assignedStaffId) {
+            alert("Please assign a staff member to clean this room.");
+            return;
+        }
+
         const res = await updateRoomStatus(tenant.id, roomId, 'available', null); // Clear assignment on clean
         if (res.success) {
             await logHousekeepingAction(tenant.id, {
@@ -52,12 +58,20 @@ export function CleaningDashboard() {
                 new_status: 'available',
                 action_type: 'completion'
             });
+            toast.success("Room marked as available!");
             setRefreshKey(prev => prev + 1);
+        } else {
+            toast.error("Failed to update status.");
         }
     };
 
     const handleToggleCleaning = async (roomId: string, currentStatus: string, assignedStaffId: string | null) => {
         if (!tenant) return;
+        if (!assignedStaffId) {
+            alert("Please assign a staff member before starting cleaning.");
+            return;
+        }
+
         const nextStatus = currentStatus === 'dirty' ? 'cleaning' : 'dirty';
         const res = await updateRoomStatus(tenant.id, roomId, nextStatus);
         if (res.success) {
@@ -68,7 +82,10 @@ export function CleaningDashboard() {
                 new_status: nextStatus,
                 action_type: 'status_change'
             });
+            toast.success(`Room status updated to ${nextStatus}.`);
             setRefreshKey(prev => prev + 1);
+        } else {
+            toast.error("Failed to update status.");
         }
     };
 
@@ -143,6 +160,7 @@ export function CleaningDashboard() {
                             onComplete={() => handleMarkClean(room.id, room.status, room.assigned_staff_id)}
                             onAssign={(staffId) => handleAssignStaff(room.id, staffId, room.status)}
                             onViewHistory={() => viewHistory(room.id)}
+                            canAssign={hasPermission('staff.manage')}
                         />
                     ))
                 )}
@@ -214,14 +232,16 @@ function CleaningTask({
     onToggle, 
     onComplete,
     onAssign,
-    onViewHistory
+    onViewHistory,
+    canAssign
 }: { 
     room: any, 
     staffMembers: any[], 
     onToggle: () => void, 
     onComplete: () => void,
     onAssign: (staffId: string) => void,
-    onViewHistory: () => void
+    onViewHistory: () => void,
+    canAssign: boolean
 }) {
     const isCleaning = room.status === 'cleaning';
 
@@ -244,8 +264,9 @@ function CleaningTask({
                         <Select 
                             value={room.assigned_staff_id || ""} 
                             onValueChange={onAssign}
+                            disabled={!canAssign}
                         >
-                            <SelectTrigger className="h-8 bg-white/5 border-white/5 rounded-full px-3 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-all w-[160px]">
+                            <SelectTrigger className={`h-8 bg-white/5 border-white/5 rounded-full px-3 text-[10px] font-bold uppercase tracking-widest transition-all w-[160px] ${!canAssign ? 'cursor-not-allowed opacity-50' : 'text-white/40 hover:text-white'}`}>
                                 <User className="w-3 h-3 mr-2" />
                                 <SelectValue placeholder="Assign Staff" />
                             </SelectTrigger>

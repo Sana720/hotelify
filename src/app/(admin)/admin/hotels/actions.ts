@@ -9,11 +9,19 @@ export async function provisionHotel(formData: {
     subdomain: string;
     adminEmail: string;
     adminName: string;
+    adminPassword?: string;
     tier: string;
     planId: string;
+    trialDays: number;
+    leadId?: string;
 }) {
     const cookieStore = await cookies();
     
+    // Calculate trial end date
+    const trialEndsAt = formData.trialDays > 0 
+        ? new Date(Date.now() + formData.trialDays * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+
     // Use a dedicated service role client from supabase-js (NOT ssr)
     // to guarantee we are bypassing RLS by not including user cookies.
     const supabaseService = createClient(
@@ -38,14 +46,21 @@ export async function provisionHotel(formData: {
             .insert([{
                 name: formData.name,
                 subdomain: formData.subdomain.toLowerCase().replace(/\s+/g, '-'),
-                subscription_tier: formData.tier,
+                subscription_tier: formData.tier.toLowerCase(),
                 plan_id: formData.planId,
-                status: 'Trial'
+                status: 'Trial',
+                subscription_status: formData.trialDays > 0 ? 'trialing' : 'active',
+                trial_ends_at: trialEndsAt
             }])
             .select()
             .single();
 
-        if (orgError) throw orgError;
+        if (orgError) {
+            if (orgError.code === '23505') {
+                throw new Error(`The subdomain '${formData.subdomain}' is already in use. Please choose a unique subdomain.`);
+            }
+            throw orgError;
+        }
 
         // 2. Create Default Admin Role for this Org
         const { data: role, error: roleError } = await supabaseService
@@ -60,23 +75,36 @@ export async function provisionHotel(formData: {
 
         if (roleError) throw roleError;
 
-        // 3. Invite Admin via Auth (Service Role required)
-        const { data: inviteData, error: inviteError } = await supabaseService.auth.admin.inviteUserByEmail(
-            formData.adminEmail,
-            {
-                data: { full_name: formData.adminName },
-                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login`
-            }
-        );
+        // 3. Create / Link Admin (Handle existing users to avoid duplicates)
+        let userId: string;
 
-        if (inviteError) throw inviteError;
+        // Check if user already exists
+        const { data: existingUsers, error: listError } = await supabaseService.auth.admin.listUsers();
+        if (listError) throw listError;
+
+        const existingUser = existingUsers.users.find(u => u.email === formData.adminEmail);
+
+        if (existingUser) {
+            console.log("Linking existing auth user:", existingUser.id);
+            userId = existingUser.id;
+        } else {
+            const { data: userData, error: userError } = await supabaseService.auth.admin.createUser({
+                email: formData.adminEmail,
+                password: formData.adminPassword || "Hotelify123!",
+                email_confirm: true,
+                user_metadata: { full_name: formData.adminName }
+            });
+
+            if (userError) throw userError;
+            userId = userData.user.id;
+        }
 
         // 4. Create Staff Record
         const { error: staffError } = await supabaseService
             .from("staff")
             .insert([{
                 org_id: org.id,
-                user_id: inviteData.user.id,
+                user_id: userId,
                 email: formData.adminEmail,
                 full_name: formData.adminName,
                 role_id: role.id,
@@ -95,6 +123,14 @@ export async function provisionHotel(formData: {
         await supabaseService.from("operational_policies").insert([{
             org_id: org.id
         }]);
+
+        // 7. Update Lead status if applicable
+        if (formData.leadId) {
+            await supabaseService
+                .from('leads')
+                .update({ status: 'Converted' })
+                .eq('id', formData.leadId);
+        }
 
         return { success: true, orgId: org.id };
     } catch (error: any) {

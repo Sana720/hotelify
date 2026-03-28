@@ -256,8 +256,22 @@ export function GuestFolio({ bookingId, guestName, onClose }: GuestFolioProps) {
             .eq('id', folio.id);
 
         if (!error) {
-            toast.success("Bill settled successfully.");
-            await fetchFolio();
+            // Automatically Check Out
+            await supabase
+                .from('bookings')
+                .update({ status: 'checked_out' })
+                .eq('id', bookingId);
+                
+            if (bookingDetails?.rooms?.room_number && tenant?.id) {
+                await supabase
+                    .from('rooms')
+                    .update({ status: 'dirty' })
+                    .eq('room_number', bookingDetails.rooms.room_number)
+                    .eq('org_id', tenant.id);
+            }
+
+            toast.success("Bill settled and guest checked out successfully.");
+            onClose(); // Close the modal and let the parent list refresh
         } else {
             toast.error("Settlement failed.");
         }
@@ -580,7 +594,7 @@ export function GuestFolio({ bookingId, guestName, onClose }: GuestFolioProps) {
                                 disabled={isActionLoading || folio?.status === 'closed'}
                                 className="h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-[10px] gap-3 shadow-xl shadow-blue-900/40 transition-all active:scale-95 order-1 sm:order-2"
                             >
-                                {isActionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Wallet className="w-5 h-5" /> Settle & Close Statement</>}
+                                {isActionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Wallet className="w-5 h-5" /> Settle & Checkout</>}
                             </Button>
                         </div>
                     </CardContent>

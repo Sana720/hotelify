@@ -84,7 +84,7 @@ export default function AdminLoginPage() {
                                     id="email"
                                     name="email"
                                     type="email"
-                                    placeholder="admin@hotelify.internal"
+                                    placeholder="admin@example.com"
                                     className="pl-12 h-14 bg-white/[0.02] border-white/5 rounded-2xl focus:ring-indigo-500/20 focus:border-indigo-500/40 transition-all text-white placeholder:text-zinc-800 font-medium"
                                     required
                                 />

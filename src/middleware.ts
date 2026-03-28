@@ -90,8 +90,24 @@ export default async function middleware(req: NextRequest) {
         }
     }
 
-    // 3. Tenant Logic (Keep existing)
-    const allowedDomains = ['hotelify.com', 'localhost:3000'];
+    // 3. Tenant Logic (Dynamic for any deployment)
+    const allowedDomains = [
+        'hotelify.com', 
+        'localhost:3000', 
+        'hotelify-fawn.vercel.app'
+    ];
+    
+    // Also include the current site URL from env if it exists
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (siteUrl) {
+        try {
+            const siteHostname = new URL(siteUrl).hostname;
+            if (!allowedDomains.includes(siteHostname)) {
+                allowedDomains.push(siteHostname);
+            }
+        } catch (e) {}
+    }
+
     const isPlatformDomain = allowedDomains.some(domain => hostname.endsWith(domain));
     let tenant = null;
 

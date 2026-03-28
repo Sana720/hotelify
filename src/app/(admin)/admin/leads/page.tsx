@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { AddHotelModal } from "../hotels/add-hotel-modal";
 
 interface Lead {
     id: string;
@@ -28,6 +29,8 @@ interface Lead {
     phone: string;
     hotel_name: string;
     status: 'Pending' | 'Contacted' | 'Converted' | 'Spam';
+    room_count?: number;
+    property_type?: string;
     created_at: string;
 }
 
@@ -35,6 +38,8 @@ export default function LeadsPage() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
+    const [selectedLeadForProvision, setSelectedLeadForProvision] = useState<Lead | null>(null);
 
     useEffect(() => {
         fetchLeads();
@@ -190,8 +195,16 @@ export default function LeadsPage() {
                                                     {lead.hotel_name.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <div className="font-bold text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{lead.hotel_name}</div>
-                                                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mt-0.5">Trial Applicant</div>
+                                                    <div className="font-bold text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight italic">{lead.hotel_name}</div>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{lead.property_type || 'Hotel'}</span>
+                                                        {lead.room_count && (
+                                                            <>
+                                                                <span className="w-1 h-1 rounded-full bg-zinc-800" />
+                                                                <span className="text-[9px] font-black uppercase tracking-widest text-blue-500/60">{lead.room_count} Units</span>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -220,9 +233,24 @@ export default function LeadsPage() {
                                             </div>
                                         </td>
                                         <td className="p-6 text-right">
-                                            <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white/5">
-                                                <MoreHorizontal className="w-4 h-4 text-zinc-500" />
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                {lead.status !== 'Converted' && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline"
+                                                        className="h-8 rounded-lg border-blue-500/20 bg-blue-500/5 text-blue-400 font-black uppercase tracking-widest text-[9px] hover:bg-blue-500 hover:text-white transition-all"
+                                                        onClick={() => {
+                                                            setSelectedLeadForProvision(lead);
+                                                            setIsProvisionModalOpen(true);
+                                                        }}
+                                                    >
+                                                        Verify & Provision
+                                                    </Button>
+                                                )}
+                                                <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white/5">
+                                                    <MoreHorizontal className="w-4 h-4 text-zinc-500" />
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -230,6 +258,20 @@ export default function LeadsPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <AddHotelModal 
+                    isOpen={isProvisionModalOpen}
+                    onClose={() => setIsProvisionModalOpen(false)}
+                    leadId={selectedLeadForProvision?.id}
+                    initialData={selectedLeadForProvision ? {
+                        name: selectedLeadForProvision.hotel_name,
+                        email: selectedLeadForProvision.email
+                    } : undefined}
+                    onSuccess={() => {
+                        fetchLeads();
+                        setIsProvisionModalOpen(false);
+                    }}
+                />
 
                 {/* Mobile View */}
                 <div className="md:hidden divide-y divide-white/5">

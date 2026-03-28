@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/components/providers/TenantProvider";
 import { updatePropertySettings, fetchPropertySettings } from "@/app/(admin)/admin/hotels/actions";
 
-export function PropertyIdentityForm() {
+export function PropertyIdentityForm({ onSuccess }: { onSuccess?: () => void }) {
     const { tenant } = useTenant();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -179,6 +179,7 @@ export function PropertyIdentityForm() {
                 newFormData.registration_type = identityData.tax_registration_type || "GST";
                 newFormData.gst_number = identityData.gst_number || "";
                 newFormData.logo_url = identityData.logo_url || "";
+                newFormData.description = identityData.description || "";
             }
 
             if (policyData) {
@@ -187,7 +188,6 @@ export function PropertyIdentityForm() {
                 newFormData.cancellation_policy = policyData.cancellation_policy || "";
                 newFormData.upcoming_checkin_days = policyData.upcoming_checkin_days?.toString() || "7";
                 newFormData.upcoming_checkout_days = policyData.upcoming_checkout_days?.toString() || "7";
-                newFormData.description = policyData.description || "";
             }
 
             setFormData(newFormData);
@@ -278,6 +278,7 @@ export function PropertyIdentityForm() {
             if (!result.success) throw new Error(result.error);
 
             setStatus({ type: 'success', message: 'Settings Synchronized' });
+            onSuccess?.();
             setTimeout(() => setStatus(null), 3000);
         } catch (err: any) {
             console.error("Critical Error: Failed to synchronize property settings.", {
